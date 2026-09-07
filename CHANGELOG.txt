@@ -1,6 +1,17 @@
 CHANGELOG — Relais 200m by C. Guilhem
 =====================================
 
+v1.10
+-----
+- Résultats : le total /12 s'accompagne désormais du total combiné /20
+  (fin de séquence /12 + fil de séquence /8 saisi dans Rôles).
+- Nouvel onglet Récap : tableau récapitulatif noir sur blanc pour toute la
+  classe, une ligne par élève (regroupées par équipe), avec le détail
+  complet de la notation (200m, performance 200m/relais/IT, positionnement,
+  AFLP1, AFLP2, total fin de séquence /12, AFLP4, AFLP5, total fil de
+  séquence /8, TOTAL /20). Bouton Imprimer : mise en page paysage, lignes
+  non coupées entre les pages, aucune couleur (noir sur blanc).
+
 v1.9
 ----
 - Onglet Rôles : ajout de la notation du fil de séquence (/8 pts, AFLP 4 —
