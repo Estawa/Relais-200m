@@ -1,5 +1,7 @@
-// Lecture brute d'un fichier CSV : renvoie un tableau de lignes (tableaux de cellules texte),
-// sans aucune hypothèse sur la présence ou le contenu d'une ligne d'en-tête.
+// Lecture brute d'un fichier élèves (CSV, XLSX ou ODS) : renvoie un tableau de lignes
+// (tableaux de cellules texte), sans aucune hypothèse sur la présence ou le contenu d'une
+// ligne d'en-tête.
+import * as XLSX from "xlsx";
 
 function decoderTexteFichier(buffer) {
   const octets = new Uint8Array(buffer);
@@ -60,19 +62,29 @@ function parseCsvTexte(texte) {
   return lignes.map((l) => l.map((c) => c.trim()));
 }
 
-// Charge un fichier .csv/.txt (File) et retourne une Promise résolue avec le tableau brut de lignes
-// (chaque ligne = tableau de cellules texte), lignes vides retirées.
+// Charge un fichier .csv/.txt/.xlsx/.xls/.ods (File) et retourne une Promise résolue avec
+// le tableau brut de lignes (chaque ligne = tableau de cellules texte), lignes vides retirées.
 export function parserLignesCsv(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onerror = () => reject(new Error("Lecture du fichier impossible."));
     reader.onload = (evt) => {
       try {
-        const texte = decoderTexteFichier(evt.target.result);
-        const lignes = parseCsvTexte(texte)
-          .filter((l) => l.some((c) => c !== ""))
-          .map((l) => l.map((c) => c.trim()));
-        resolve(lignes);
+        const extension = file.name.split(".").pop().toLowerCase();
+        let lignes;
+        if (extension === "csv" || extension === "txt") {
+          const texte = decoderTexteFichier(evt.target.result);
+          lignes = parseCsvTexte(texte);
+        } else {
+          const classeur = XLSX.read(evt.target.result, { type: "array" });
+          const feuille = classeur.Sheets[classeur.SheetNames[0]];
+          if (!feuille) throw new Error("Aucune feuille trouvée dans ce fichier.");
+          lignes = XLSX.utils.sheet_to_json(feuille, { header: 1, defval: "" });
+        }
+        const nonVides = lignes
+          .filter((l) => Array.isArray(l) && l.some((c) => String(c ?? "").trim() !== ""))
+          .map((l) => l.map((c) => String(c ?? "").trim()));
+        resolve(nonVides);
       } catch (err) {
         reject(err);
       }
