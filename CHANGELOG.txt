@@ -1,0 +1,46 @@
+CHANGELOG — Relais 200m by C. Guilhem
+=====================================
+
+v1.3
+----
+- Test individuel 200m : plus besoin d'indiquer le nombre de coureurs à
+  l'avance. Un seul chrono, on pointe les arrivées au fil de l'eau, et on
+  identifie les élèves une fois la salve terminée.
+- Nouvel outil "Classement & construction des équipes" (onglet Équipes) :
+  liste unique de tous les élèves classés par temps, glisser-déposer pour
+  ajuster un rang, et insertion d'espaces pour délimiter les équipes à la
+  main. Un bouton valide la construction en équipes réelles.
+- La grille "Équipes actuelles" reste disponible en dessous pour affiner
+  après validation (renommer, ajouter/retirer un membre).
+
+v1.2
+----
+- Couloir : une équipe garde désormais le même couloir d'une manche à
+  l'autre (proposé automatiquement, modifiable).
+- Ordre des coureurs dans l'équipe (qui part, qui relaye, qui termine) :
+  tourne automatiquement à chaque nouvelle manche pour cette équipe.
+- Notation : retour à des paliers temps → note (barème filles/garçons),
+  appliqués à la moyenne des 2 courses de l'équipe.
+- Trinômes : leur temps moyen est ramené à un équivalent binôme par une
+  règle de trois (barème conçu pour des équipes de 2) avant consultation
+  du barème.
+- Renommage de l'application : "Relais 200m by C. Guilhem".
+
+v1.1
+----
+- Onglet Élèves : ajout du test individuel 200m par salves de 1 à 7
+  coureurs (un seul chrono, arrivées pointées dans l'ordre, noms
+  attribués après la course).
+- Onglet Équipes : formation automatique par tranches consécutives de
+  niveau (les plus rapides ensemble, puis les suivants, etc.), au lieu
+  d'un équilibrage fort/faible. Choix binômes / trinômes.
+- Onglet Évaluation (ex-Chrono) : attribution d'un couloir par équipe,
+  saisie d'une note de qualité de passage de témoin par échange.
+- Nouvel onglet Rôles : suivi starter / juge de passage de témoin /
+  rangement du matériel par élève sur le cycle.
+
+v1.0
+----
+- Première version : import de la classe (CSV), saisie manuelle des
+  temps au 200m, constitution d'équipes, chronomètre multi-équipes par
+  série avec pointage d'arrivée, classement, barème temps → note.
