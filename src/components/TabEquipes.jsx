@@ -5,12 +5,12 @@ import { formatChrono } from "../utils/temps";
 import { uid } from "../utils/storage";
 import Classement from "./Classement";
 
-export default function TabEquipes({ eleves, elevesById, equipes, setEquipes, classement, setClassement }) {
+export default function TabEquipes({ eleves, elevesById, equipes, setEquipes, classement, setClassement, classeActive }) {
   const affectes = new Set(equipes.flatMap((eq) => eq.membreIds));
   const nonAffectes = eleves.filter((e) => !affectes.has(e.id));
 
   function nouvelleEquipeVide() {
-    setEquipes((prev) => [...prev, { id: uid(), nom: `Équipe ${prev.length + 1}`, membreIds: [] }]);
+    setEquipes((prev) => [...prev, { id: uid(), nom: `Équipe ${prev.length + 1}`, membreIds: [], classe: classeActive }]);
   }
 
   function renommer(id, nom) {

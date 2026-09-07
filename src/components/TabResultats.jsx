@@ -1,104 +1,113 @@
 import React from "react";
 import { formatChrono } from "../utils/temps";
-import { calculerNote, tempsEquivalentBareme } from "../utils/notation";
+import {
+  calculerPerformance,
+  noteFinSequence12,
+  OPTIONS_POSITIONNEMENT,
+  OPTIONS_AFLP2,
+} from "../utils/bareme12";
 
-export default function TabResultats({ equipes, elevesById, series, bareme }) {
-  const bonneNoteDispo = bareme.filles.length > 0 || bareme.garcons.length > 0;
-  const manchesTerminees = series.filter((s) => s.statut === "terminee");
+export default function TabResultats({ equipes, elevesById, series, eleves, setEleves }) {
+  function modifier(id, champ, valeur) {
+    setEleves((prev) => prev.map((e) => (e.id === id ? { ...e, [champ]: valeur === "" ? null : Number(valeur) } : e)));
+  }
 
-  const parEquipe = equipes
-    .map((eq) => {
-      const temps = [];
-      const temoinScores = [];
-      manchesTerminees.forEach((s) => {
-        const t = s.arrivals[eq.id];
-        if (t != null) temps.push(t);
-        (s.temoin[eq.id] || []).forEach((sc) => {
-          if (typeof sc === "number") temoinScores.push(sc);
-        });
-      });
-      if (temps.length === 0) return null;
-      const moyenne = temps.reduce((a, b) => a + b, 0) / temps.length;
-      const moyenneEquivalente = tempsEquivalentBareme(moyenne, eq.membreIds.length);
-      const totalTemoin = temoinScores.length > 0 ? temoinScores.reduce((a, b) => a + b, 0) : null;
-      return { equipe: eq, temps, moyenne, moyenneEquivalente, totalTemoin };
-    })
-    .filter(Boolean)
-    .sort((a, b) => a.moyenne - b.moyenne);
+  const equipesTriees = [...equipes].sort((a, b) => a.nom.localeCompare(b.nom));
 
   return (
     <div>
       <h2 className="font-display text-2xl tracking-wide mb-2">Résultats</h2>
       <p className="text-xs text-piste-craie/40 mb-5">
-        Classement par équipe, moyenne des 2 courses. Pour les trinômes, la note est calculée sur un temps ramené
-        à un équivalent binôme (règle de trois).
+        Notation officielle de la situation d'évaluation fin de séquence, sur 12 points (AFLP 1 : 7 pts — AFLP 2 : 5
+        pts). Les 8 points restants (fil de séquence) se répartissent sur ce qui est déjà suivi dans l'onglet Rôles.
+        Le barème officiel est calibré pour des binômes ; pour un trinôme, le temps de relais et la somme des 200m
+        individuels sont ramenés à un équivalent binôme par une règle de trois (× 2/3) avant d'être comparés au
+        même barème.
       </p>
 
-      {!bonneNoteDispo && (
-        <div className="text-xs bg-piste-ambre/10 border border-piste-ambre/30 text-piste-ambre rounded-lg px-4 py-3 mb-5">
-          Barème non configuré : les temps sont affichés sans note. Renseigne le barème dans l'onglet correspondant
-          pour afficher les notes.
-        </div>
-      )}
-
-      {parEquipe.length === 0 ? (
+      {equipesTriees.length === 0 ? (
         <div className="text-piste-craie/50 text-sm border border-dashed border-white/10 rounded-lg p-8 text-center">
-          Aucune arrivée enregistrée pour l'instant.
+          Aucune équipe pour l'instant.
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-white/10">
-          <table className="w-full text-sm">
-            <thead className="bg-piste-panneau text-piste-craie/50 text-xs uppercase">
-              <tr>
-                <th className="text-left px-3 py-2">Rang</th>
-                <th className="text-left px-3 py-2">Équipe</th>
-                <th className="text-left px-3 py-2">Composition &amp; note</th>
-                <th className="text-left px-3 py-2">Courses</th>
-                <th className="text-left px-3 py-2">Moyenne</th>
-                <th className="text-left px-3 py-2">Témoin</th>
-              </tr>
-            </thead>
-            <tbody>
-              {parEquipe.map((ligne, idx) => (
-                <tr key={ligne.equipe.id} className="border-t border-white/5">
-                  <td className="px-3 py-2 font-display text-lg text-piste-ambre">{idx + 1}</td>
-                  <td className="px-3 py-2 font-display text-lg tracking-wide">{ligne.equipe.nom}</td>
-                  <td className="px-3 py-2">
-                    <ul>
-                      {ligne.equipe.membreIds.map((id) => {
-                        const el = elevesById[id];
-                        if (!el) return null;
-                        const bar = el.sexe === "F" ? bareme.filles : bareme.garcons;
-                        const note = calculerNote(ligne.moyenneEquivalente, bar);
-                        return (
-                          <li key={id} className="flex items-center gap-2">
-                            <span>
-                              {el.prenom} {el.nom}
+        <div className="space-y-4">
+          {equipesTriees.map((eq) => {
+            return (
+              <div key={eq.id} className="bg-piste-panneau rounded-lg border border-white/10 p-4">
+                <div className="font-display text-lg tracking-wide mb-3">{eq.nom}</div>
+
+                <div className="space-y-3">
+                  {eq.membreIds.map((id) => {
+                    const el = elevesById[id];
+                    if (!el) return null;
+                    const perf = calculerPerformance(el, eq, elevesById, series);
+                    const total = noteFinSequence12(el, perf);
+
+                    return (
+                      <div key={id} className="border-t border-white/5 pt-3 first:border-0 first:pt-0">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm font-semibold">
+                            {el.prenom} {el.nom}
+                            <span className="text-piste-craie/30 font-normal ml-1.5">
+                              {el.sexe ? `(${el.sexe})` : ""} · 200m {el.temps200 != null ? `${(el.temps200 / 1000).toFixed(1)}s` : "—"}
                             </span>
-                            {note != null && <span className="text-piste-pelouse font-semibold text-xs">{note}/20</span>}
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  </td>
-                  <td className="px-3 py-2 tabular text-piste-craie/50">
-                    {ligne.temps.map((t) => formatChrono(t)).join(" · ")}
-                  </td>
-                  <td className="px-3 py-2 tabular font-display text-xl">
-                    {formatChrono(ligne.moyenne)}
-                    {ligne.equipe.membreIds.length === 3 && (
-                      <div className="text-xs text-piste-craie/30 font-body">
-                        ≈ {formatChrono(ligne.moyenneEquivalente)} en équivalent binôme
+                          </span>
+                          <span className="font-display text-2xl text-piste-ambre tabular">
+                            {total != null ? `${total} / 12` : "—"}
+                          </span>
+                        </div>
+
+                        <div className="text-xs text-piste-craie/50 mb-2">
+                          {perf ? (
+                            <>
+                              Performance{perf.equivalentBinome ? " (équivalent binôme, règle de 3)" : ""} :{" "}
+                              <span className="text-piste-craie/80">
+                                200m {perf.note200}/3 · relais (moy. {formatChrono(perf.moyenneRelaisMs)}, {perf.nbManches}{" "}
+                                manche{perf.nbManches > 1 ? "s" : ""}) {perf.noteRelais}/3 · IT {perf.itSecondes >= 0 ? "+" : ""}
+                                {perf.itSecondes}s {perf.noteIT}/3
+                              </span>{" "}
+                              → moyenne {perf.performance}/3
+                            </>
+                          ) : (
+                            "Performance non calculable (temps 200m manquant pour l'élève ou un·e coéquipier·e, ou aucune manche chronométrée)."
+                          )}
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-4 text-xs">
+                          <label className="flex items-center gap-1.5">
+                            <span className="text-piste-craie/50">AFLP 1 — Positionnement (/4)</span>
+                            <select
+                              value={el.aflp1Position ?? ""}
+                              onChange={(ev) => modifier(el.id, "aflp1Position", ev.target.value)}
+                              className="bg-piste-nuit/60 border border-white/10 rounded px-2 py-1 tabular"
+                            >
+                              <option value="">—</option>
+                              {OPTIONS_POSITIONNEMENT.map((v) => (
+                                <option key={v} value={v}>{v}</option>
+                              ))}
+                            </select>
+                          </label>
+                          <label className="flex items-center gap-1.5">
+                            <span className="text-piste-craie/50">AFLP 2 (/5)</span>
+                            <select
+                              value={el.aflp2Note ?? ""}
+                              onChange={(ev) => modifier(el.id, "aflp2Note", ev.target.value)}
+                              className="bg-piste-nuit/60 border border-white/10 rounded px-2 py-1 tabular"
+                            >
+                              <option value="">—</option>
+                              {OPTIONS_AFLP2.map((v) => (
+                                <option key={v} value={v}>{v}</option>
+                              ))}
+                            </select>
+                          </label>
+                        </div>
                       </div>
-                    )}
-                  </td>
-                  <td className="px-3 py-2 tabular text-piste-craie/50">
-                    {ligne.totalTemoin != null ? `${ligne.totalTemoin}` : "—"}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
