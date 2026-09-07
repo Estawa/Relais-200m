@@ -3,6 +3,8 @@ import { formatChrono } from "../utils/temps";
 import {
   calculerPerformance,
   noteFinSequence12,
+  noteFilSequence8,
+  noteGenerale20,
   OPTIONS_POSITIONNEMENT,
   OPTIONS_AFLP2,
 } from "../utils/bareme12";
@@ -41,7 +43,9 @@ export default function TabResultats({ equipes, elevesById, series, eleves, setE
                     const el = elevesById[id];
                     if (!el) return null;
                     const perf = calculerPerformance(el, eq, elevesById, series);
-                    const total = noteFinSequence12(el, perf);
+                    const total12 = noteFinSequence12(el, perf);
+                    const total8 = noteFilSequence8(el);
+                    const total20 = noteGenerale20(el, perf);
 
                     return (
                       <div key={id} className="border-t border-white/5 pt-3 first:border-0 first:pt-0">
@@ -52,9 +56,14 @@ export default function TabResultats({ equipes, elevesById, series, eleves, setE
                               {el.sexe ? `(${el.sexe})` : ""} · 200m {el.temps200 != null ? `${(el.temps200 / 1000).toFixed(1)}s` : "—"}
                             </span>
                           </span>
-                          <span className="font-display text-2xl text-piste-ambre tabular">
-                            {total != null ? `${total} / 12` : "—"}
-                          </span>
+                          <div className="text-right">
+                            <div className="font-display text-2xl text-piste-ambre tabular leading-none">
+                              {total20 != null ? `${total20} / 20` : "— / 20"}
+                            </div>
+                            <div className="text-[10px] text-piste-craie/30 tabular">
+                              {total12 != null ? `${total12}/12` : "—/12"} + {total8 != null ? `${total8}/8` : "—/8"}
+                            </div>
+                          </div>
                         </div>
 
                         <div className="text-xs text-piste-craie/50 mb-2">
