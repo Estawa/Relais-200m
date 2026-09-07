@@ -1,37 +1,31 @@
 import React, { useRef, useState } from "react";
 import { UploadCloud, Plus, Trash2 } from "lucide-react";
-import { parseElevesCsv } from "../utils/csv";
 import { formatChrono, parseTempsSaisi } from "../utils/temps";
 import { uid } from "../utils/storage";
 import TestSalve from "./TestSalve";
+import ImportEleves from "./ImportEleves";
 
 export default function TabEleves({ eleves, setEleves }) {
-  const fileRef = useRef(null);
   const [classeFiltre, setClasseFiltre] = useState("");
+  const [importOuvert, setImportOuvert] = useState(false);
 
   const classes = [...new Set(eleves.map((e) => e.classe).filter(Boolean))].sort();
   const visibles = classeFiltre ? eleves.filter((e) => e.classe === classeFiltre) : eleves;
 
-  function importerFichier(e) {
-    const fichier = e.target.files?.[0];
-    if (!fichier) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const lignes = parseElevesCsv(String(reader.result));
-      const nouveaux = lignes
-        .filter((l) => l.nom || l.prenom)
-        .map((l) => ({
-          id: uid(),
-          nom: l.nom,
-          prenom: l.prenom,
-          classe: l.classe,
-          sexe: l.sexe === "F" || l.sexe === "M" ? l.sexe : "",
-          temps200: null,
-        }));
-      setEleves((prev) => [...prev, ...nouveaux]);
-    };
-    reader.readAsText(fichier, "utf-8");
-    e.target.value = "";
+  function importerEleves(nouveaux) {
+    setEleves((prev) => {
+      const copie = [...prev];
+      nouveaux.forEach((n) => {
+        const idx = copie.findIndex((e) => e.id === n.id);
+        if (idx !== -1) {
+          copie[idx] = { ...copie[idx], nom: n.nom, prenom: n.prenom, classe: n.classe, sexe: n.sexe || copie[idx].sexe };
+        } else {
+          copie.push({ id: n.id, nom: n.nom, prenom: n.prenom, classe: n.classe, sexe: n.sexe, temps200: null });
+        }
+      });
+      return copie;
+    });
+    setImportOuvert(false);
   }
 
   function ajouterEleve() {
@@ -54,9 +48,8 @@ export default function TabEleves({ eleves, setEleves }) {
       <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
         <h2 className="font-display text-2xl tracking-wide">Élèves &amp; test 200m</h2>
         <div className="flex gap-2">
-          <input ref={fileRef} type="file" accept=".csv" className="hidden" onChange={importerFichier} />
           <button
-            onClick={() => fileRef.current?.click()}
+            onClick={() => setImportOuvert(true)}
             className="flex items-center gap-2 bg-piste-panneau border border-white/10 hover:border-piste-brique px-3 py-2 rounded text-sm"
           >
             <UploadCloud size={16} /> Importer une classe (CSV)
@@ -167,6 +160,10 @@ export default function TabEleves({ eleves, setEleves }) {
             </tbody>
           </table>
         </div>
+      )}
+
+      {importOuvert && (
+        <ImportEleves elevesExistants={eleves} onImporte={importerEleves} onFermer={() => setImportOuvert(false)} />
       )}
     </div>
   );

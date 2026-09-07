@@ -5,8 +5,16 @@ import { construireClassement, groupesDepuisClassement, deplacerToken } from "..
 import { uid } from "../utils/storage";
 
 export default function Classement({ eleves, elevesById, classement, setClassement, setEquipes, equipes }) {
-  const [taille, setTaille] = useState(2);
+  const [motif, setMotif] = useState([2]);
   const [dragId, setDragId] = useState(null);
+
+  function ajouterAuMotif(taille) {
+    setMotif((m) => [...m, taille]);
+  }
+
+  function retirerDuMotif(index) {
+    setMotif((m) => m.filter((_, i) => i !== index));
+  }
 
   function regenerer() {
     if (
@@ -15,7 +23,7 @@ export default function Classement({ eleves, elevesById, classement, setClasseme
     ) {
       return;
     }
-    setClassement(construireClassement(eleves, taille));
+    setClassement(construireClassement(eleves, motif.length ? motif : [2]));
   }
 
   function inserer_separateur_apres(index) {
@@ -51,24 +59,46 @@ export default function Classement({ eleves, elevesById, classement, setClasseme
     <div className="bg-piste-panneau rounded-xl border border-white/10 p-5 mb-6">
       <div className="flex flex-wrap items-center justify-between gap-3 mb-1">
         <h3 className="font-display text-xl tracking-wide">Classement &amp; construction des équipes</h3>
-        <div className="flex items-center gap-2">
-          <div className="flex bg-piste-nuit/60 rounded overflow-hidden text-xs">
-            <button onClick={() => setTaille(2)} className={`px-2 py-1.5 ${taille === 2 ? "bg-piste-brique" : "text-piste-craie/50"}`}>
-              Binômes
-            </button>
-            <button onClick={() => setTaille(3)} className={`px-2 py-1.5 ${taille === 3 ? "bg-piste-brique" : "text-piste-craie/50"}`}>
-              Trinômes
-            </button>
-          </div>
-          <button onClick={regenerer} className="flex items-center gap-1.5 text-xs bg-piste-nuit/60 hover:bg-piste-nuit px-2.5 py-1.5 rounded">
-            <RefreshCw size={13} /> Régénérer
-          </button>
-        </div>
+        <button onClick={regenerer} className="flex items-center gap-1.5 text-xs bg-piste-nuit/60 hover:bg-piste-nuit px-2.5 py-1.5 rounded">
+          <RefreshCw size={13} /> Régénérer
+        </button>
       </div>
-      <p className="text-xs text-piste-craie/40 mb-4">
+      <p className="text-xs text-piste-craie/40 mb-2">
         Classement de tous les élèves testés, du plus rapide au plus lent. Fais glisser un élève pour ajuster son
         rang, et insère un espace pour délimiter chaque équipe.
       </p>
+
+      <div className="bg-piste-nuit/40 rounded-lg p-3 mb-4">
+        <p className="text-xs text-piste-craie/60 mb-2">
+          Motif de génération automatique (appliqué du plus rapide au plus lent, puis répété) :
+        </p>
+        <div className="flex flex-wrap items-center gap-1.5">
+          {motif.length === 0 && <span className="text-xs text-piste-craie/30 italic">Aucune taille définie</span>}
+          {motif.map((t, i) => (
+            <span
+              key={i}
+              className="flex items-center gap-1 bg-piste-brique/80 text-piste-craie text-xs font-semibold px-2 py-1 rounded"
+            >
+              {t === 2 ? "Binôme" : "Trinôme"}
+              <button onClick={() => retirerDuMotif(i)} className="hover:text-piste-nuit">
+                <X size={11} />
+              </button>
+            </span>
+          ))}
+          <button
+            onClick={() => ajouterAuMotif(2)}
+            className="flex items-center gap-1 text-xs border border-white/15 hover:border-piste-brique px-2 py-1 rounded"
+          >
+            <Plus size={11} /> Binôme
+          </button>
+          <button
+            onClick={() => ajouterAuMotif(3)}
+            className="flex items-center gap-1 text-xs border border-white/15 hover:border-piste-brique px-2 py-1 rounded"
+          >
+            <Plus size={11} /> Trinôme
+          </button>
+        </div>
+      </div>
 
       {classement.length === 0 ? (
         <p className="text-sm text-piste-craie/50">
