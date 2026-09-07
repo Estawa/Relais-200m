@@ -1,6 +1,15 @@
 CHANGELOG — Relais 200m by C. Guilhem
 =====================================
 
+v1.9
+----
+- Onglet Rôles : ajout de la notation du fil de séquence (/8 pts, AFLP 4 —
+  rôles sociaux — et AFLP 5 — préparation autonome), sous le suivi des
+  rôles existant. Par élève : choix de la répartition des 8 points (4/4,
+  6/2 ou 2/6), puis degré atteint (1 à 4) pour chaque AFLP avec la plage
+  de points correspondante ; la note se saisit dans cette plage (par
+  défaut le haut de la plage), et le total /8 s'affiche en direct.
+
 v1.8
 ----
 - Résultats : la performance /3 pts se calcule désormais aussi pour les
