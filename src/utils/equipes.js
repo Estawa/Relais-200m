@@ -1,5 +1,17 @@
 import { uid } from "./storage";
 
+// Détermine la classe "propriétaire" d'une équipe : celle indiquée explicitement,
+// ou à défaut la classe majoritaire parmi ses membres (compatibilité des équipes
+// créées avant l'introduction de la classe active).
+export function classeDeEquipe(equipe, elevesById) {
+  if (equipe.classe) return equipe.classe;
+  const classes = equipe.membreIds.map((id) => elevesById[id]?.classe).filter(Boolean);
+  if (classes.length === 0) return "";
+  const compte = {};
+  classes.forEach((c) => (compte[c] = (compte[c] || 0) + 1));
+  return Object.entries(compte).sort((a, b) => b[1] - a[1])[0][0];
+}
+
 // Constitue des équipes par tranches consécutives de niveau : les `taille`
 // élèves les plus rapides ensemble, puis les `taille` suivants, etc.,
 // jusqu'aux plus lents. C'est volontairement l'inverse d'un équilibrage :
