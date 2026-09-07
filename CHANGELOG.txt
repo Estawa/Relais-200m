@@ -1,6 +1,23 @@
 CHANGELOG — Relais 200m by C. Guilhem
 =====================================
 
+v1.5
+----
+- Sélecteur de classe active en en-tête, disponible dès l'ouverture de
+  l'application : les onglets Équipes, Évaluation et Résultats se limitent
+  désormais à la classe choisie (fini le mélange d'élèves de classes
+  différentes dans une même liste de non-affectés ou une même manche).
+  Les équipes et manches déjà créées restent chacune rattachées à leur
+  classe d'origine.
+- Onglet Élèves : bouton « Réinitialiser les temps » sur une classe
+  sélectionnée, pour repartir sur un nouveau test 200m en début de cycle
+  (efface uniquement le temps, conserve les élèves).
+- Classement & construction des équipes : chaque élève du classement peut
+  désormais être retiré individuellement (bouton croix sur sa ligne) sans
+  reconstruire tout le classement, et les élèves non inclus (absents du
+  test, retirés, ou ajoutés en cours de cycle) sont listés à part avec un
+  bouton pour les ajouter au classement à tout moment.
+
 v1.4
 ----
 - Import CSV (onglet Élèves) entièrement revu : aperçu par colonne (valeurs
