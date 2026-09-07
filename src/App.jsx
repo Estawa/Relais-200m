@@ -1,7 +1,9 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Users, Timer, ListOrdered, Gauge, UploadCloud, Award } from "lucide-react";
+import { Users, Timer, ListOrdered, Gauge, UploadCloud, Award, ArrowLeft } from "lucide-react";
 import { loadState, saveState } from "./utils/storage";
 import { classeDeEquipe } from "./utils/equipes";
+import Splash from "./components/Splash";
+import Accueil from "./components/Accueil";
 import TabEleves from "./components/TabEleves";
 import TabEquipes from "./components/TabEquipes";
 import TabCourse from "./components/TabCourse";
@@ -19,6 +21,7 @@ const ONGLETS = [
 ];
 
 export default function App() {
+  const [ecran, setEcran] = useState("splash"); // splash | accueil | app
   const [ongletActif, setOngletActif] = useState("eleves");
   const [eleves, setEleves] = useState(() => loadState("eleves", []));
   const [equipes, setEquipes] = useState(() => loadState("equipes", []));
@@ -43,19 +46,16 @@ export default function App() {
     return map;
   }, [eleves]);
 
-  const classesDisponibles = useMemo(
-    () => [...new Set(eleves.map((e) => e.classe).filter(Boolean))].sort(),
-    [eleves]
-  );
-
-  // Si la classe active n'existe plus (ou n'a jamais été choisie), on retombe sur la première disponible.
-  useEffect(() => {
-    if (classesDisponibles.length > 0 && !classesDisponibles.includes(classeActive)) {
-      setClasseActive(classesDisponibles[0]);
-    } else if (classesDisponibles.length === 0 && classeActive !== "") {
-      setClasseActive("");
-    }
-  }, [classesDisponibles, classeActive]);
+  const classesInfo = useMemo(() => {
+    const compte = {};
+    eleves.forEach((e) => {
+      if (!e.classe) return;
+      compte[e.classe] = (compte[e.classe] || 0) + 1;
+    });
+    return Object.entries(compte)
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([nom, nbEleves]) => ({ nom, nbEleves }));
+  }, [eleves]);
 
   const elevesClasse = useMemo(
     () => eleves.filter((e) => e.classe === classeActive),
@@ -92,30 +92,83 @@ export default function App() {
     });
   }
 
+  function importerDepuisAccueil(nouveaux) {
+    setEleves((prev) => {
+      const copie = [...prev];
+      nouveaux.forEach((n) => {
+        const idx = copie.findIndex((e) => e.id === n.id);
+        if (idx !== -1) {
+          copie[idx] = { ...copie[idx], nom: n.nom, prenom: n.prenom, classe: n.classe, sexe: n.sexe || copie[idx].sexe };
+        } else {
+          copie.push({ id: n.id, nom: n.nom, prenom: n.prenom, classe: n.classe, sexe: n.sexe, temps200: null });
+        }
+      });
+      return copie;
+    });
+  }
+
+  function ouvrirClasse(nom) {
+    setClasseActive(nom);
+    setOngletActif("eleves");
+    setEcran("app");
+  }
+
+  function supprimerClasse(nom) {
+    const nbEleves = eleves.filter((e) => e.classe === nom).length;
+    if (
+      !confirm(
+        `Supprimer définitivement la classe ${nom} ? Ses ${nbEleves} élève(s), leurs équipes, classement et manches enregistrées seront effacés. Cette action est irréversible.`
+      )
+    ) {
+      return;
+    }
+    const idsEquipesASupprimer = new Set(
+      equipes.filter((eq) => classeDeEquipe(eq, elevesById) === nom).map((eq) => eq.id)
+    );
+    setEleves((prev) => prev.filter((e) => e.classe !== nom));
+    setEquipes((prev) => prev.filter((eq) => !idsEquipesASupprimer.has(eq.id)));
+    setSeries((prev) => prev.filter((s) => !s.equipeIds.some((id) => idsEquipesASupprimer.has(id))));
+    setClassement((prev) => {
+      const copie = { ...prev };
+      delete copie[nom];
+      return copie;
+    });
+    if (classeActive === nom) setClasseActive("");
+  }
+
+  if (ecran === "splash") {
+    return <Splash onTermine={() => setEcran("accueil")} />;
+  }
+
+  if (ecran === "accueil") {
+    return (
+      <Accueil
+        eleves={eleves}
+        classesInfo={classesInfo}
+        onImporte={importerDepuisAccueil}
+        onOuvrir={ouvrirClasse}
+        onSupprimer={supprimerClasse}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen flex flex-col">
       <header className="bg-piste-panneau border-b-4 border-piste-brique px-4 pt-4 pb-2 sm:px-6">
-        <div className="max-w-4xl mx-auto flex flex-wrap items-baseline justify-between gap-2">
-          <div>
-            <h1 className="font-display text-3xl sm:text-4xl font-800 tracking-wide uppercase leading-none">
-              Relais <span className="text-piste-brique">200m</span>
+        <div className="max-w-4xl mx-auto flex items-center justify-between gap-3">
+          <button
+            onClick={() => setEcran("accueil")}
+            title="Changer de classe"
+            className="flex items-center gap-1.5 text-piste-craie/50 hover:text-piste-craie text-sm shrink-0"
+          >
+            <ArrowLeft size={16} /> Classes
+          </button>
+          <div className="text-right">
+            <h1 className="font-display text-2xl sm:text-3xl font-800 tracking-wide uppercase leading-none">
+              Relais <span className="text-piste-brique">200m</span> <span className="text-piste-ambre">· {classeActive}</span>
             </h1>
-            <p className="text-xs text-piste-craie/50 mt-1">By C. Guilhem <span className="text-piste-craie/25">· v1.5</span></p>
+            <p className="text-xs text-piste-craie/50 mt-1">By C. Guilhem <span className="text-piste-craie/25">· v1.6</span></p>
           </div>
-          {classesDisponibles.length > 0 && (
-            <label className="flex items-center gap-2 text-sm">
-              <span className="text-piste-craie/50 text-xs uppercase tracking-wide">Classe</span>
-              <select
-                value={classeActive}
-                onChange={(e) => setClasseActive(e.target.value)}
-                className="bg-piste-nuit border border-white/15 rounded-lg px-3 py-1.5 font-display text-lg tracking-wide focus:outline-none focus:ring-2 focus:ring-piste-brique"
-              >
-                {classesDisponibles.map((c) => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-              </select>
-            </label>
-          )}
         </div>
       </header>
 
@@ -146,30 +199,25 @@ export default function App() {
       </nav>
 
       <main className="flex-1 max-w-4xl w-full mx-auto px-4 py-6 sm:px-6">
-        {ongletActif === "eleves" && <TabEleves eleves={eleves} setEleves={setEleves} />}
-        {ongletActif === "equipes" &&
-          (classeActive ? (
-            <TabEquipes
-              eleves={elevesClasse}
-              elevesById={elevesById}
-              equipes={equipesClasse}
-              setEquipes={setEquipesClasse}
-              classement={classementActif}
-              setClassement={setClassementActif}
-              classeActive={classeActive}
-            />
-          ) : (
-            <p className="text-piste-craie/50 text-sm border border-dashed border-white/10 rounded-lg p-8 text-center">
-              Importe d'abord une classe dans l'onglet Élèves.
-            </p>
-          ))}
+        {ongletActif === "eleves" && <TabEleves eleves={elevesClasse} setEleves={setEleves} classeActive={classeActive} />}
+        {ongletActif === "equipes" && (
+          <TabEquipes
+            eleves={elevesClasse}
+            elevesById={elevesById}
+            equipes={equipesClasse}
+            setEquipes={setEquipesClasse}
+            classement={classementActif}
+            setClassement={setClassementActif}
+            classeActive={classeActive}
+          />
+        )}
         {ongletActif === "course" && (
           <TabCourse equipes={equipesClasse} elevesById={elevesById} series={seriesClasse} setSeries={setSeries} />
         )}
         {ongletActif === "resultats" && (
           <TabResultats equipes={equipesClasse} elevesById={elevesById} series={seriesClasse} bareme={bareme} />
         )}
-        {ongletActif === "roles" && <TabRoles eleves={eleves} setEleves={setEleves} />}
+        {ongletActif === "roles" && <TabRoles eleves={elevesClasse} setEleves={setEleves} />}
         {ongletActif === "bareme" && <TabBareme bareme={bareme} setBareme={setBareme} />}
       </main>
     </div>
