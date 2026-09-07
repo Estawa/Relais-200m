@@ -13,7 +13,7 @@ const CIBLES = [
 
 const NB_EXEMPLES = 3;
 
-export default function ImportEleves({ elevesExistants, onImporte, onFermer }) {
+export default function ImportEleves({ elevesExistants, onImporte, onFermer, classeForcee }) {
   const [etape, setEtape] = useState("choix"); // choix | colonnes | apercu
   const [nomFichier, setNomFichier] = useState("");
   const [toutesLignes, setToutesLignes] = useState([]);
@@ -24,6 +24,7 @@ export default function ImportEleves({ elevesExistants, onImporte, onFermer }) {
   const [erreur, setErreur] = useState("");
   const inputRef = useRef(null);
 
+  const ciblesDisponibles = classeForcee ? CIBLES.filter((c) => c.id !== "classe") : CIBLES;
   const lignesDonnees = premiereLigneEntete ? toutesLignes.slice(1) : toutesLignes;
   const nbColonnes = toutesLignes.reduce((max, l) => Math.max(max, l.length), 0);
 
@@ -58,7 +59,7 @@ export default function ImportEleves({ elevesExistants, onImporte, onFermer }) {
   }
 
   const mappingValide = indexPour("nomComplet") !== undefined || indexPour("nom") !== undefined;
-  const classeMappee = indexPour("classe") !== undefined;
+  const classeMappee = classeForcee ? true : indexPour("classe") !== undefined;
 
   function toggleLigne(i) {
     setCochees((c) => c.map((v, idx) => (idx === i ? !v : v)));
@@ -82,7 +83,7 @@ export default function ImportEleves({ elevesExistants, onImporte, onFermer }) {
       prenom = sep.prenom;
     }
     const classeBrute = iClasse !== undefined ? String(ligne[iClasse] || "").trim() : "";
-    const classe = classeBrute || classeParDefaut.trim();
+    const classe = classeForcee || classeBrute || classeParDefaut.trim();
     const sexeBrut = iSexe !== undefined ? normaliserSexe(ligne[iSexe]) : "";
     const existant = elevesExistants.find(
       (e) => normaliser(e.nom) === normaliser(nom) && normaliser(e.prenom) === normaliser(prenom) && normaliser(e.classe) === normaliser(classe)
@@ -191,7 +192,7 @@ export default function ImportEleves({ elevesExistants, onImporte, onFermer }) {
                       className="w-full rounded-lg border border-white/15 bg-piste-nuit px-3 py-2 text-sm"
                     >
                       <option value="">— Colonne ignorée —</option>
-                      {CIBLES.map((c) => (
+                      {ciblesDisponibles.map((c) => (
                         <option key={c.id} value={c.id}>
                           {c.label}
                         </option>
@@ -214,7 +215,6 @@ export default function ImportEleves({ elevesExistants, onImporte, onFermer }) {
                   />
                 </div>
               )}
-
               <div className="flex items-center justify-between pt-1">
                 <button onClick={recommencer} className="flex items-center gap-1 text-sm text-piste-craie/60">
                   <ChevronLeft size={16} /> Changer de fichier

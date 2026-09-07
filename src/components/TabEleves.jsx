@@ -1,16 +1,12 @@
-import React, { useRef, useState } from "react";
+import React, { useState } from "react";
 import { UploadCloud, Plus, Trash2, RotateCcw } from "lucide-react";
 import { formatChrono, parseTempsSaisi } from "../utils/temps";
 import { uid } from "../utils/storage";
 import TestSalve from "./TestSalve";
 import ImportEleves from "./ImportEleves";
 
-export default function TabEleves({ eleves, setEleves }) {
-  const [classeFiltre, setClasseFiltre] = useState("");
+export default function TabEleves({ eleves, setEleves, classeActive }) {
   const [importOuvert, setImportOuvert] = useState(false);
-
-  const classes = [...new Set(eleves.map((e) => e.classe).filter(Boolean))].sort();
-  const visibles = classeFiltre ? eleves.filter((e) => e.classe === classeFiltre) : eleves;
 
   function importerEleves(nouveaux) {
     setEleves((prev) => {
@@ -31,7 +27,7 @@ export default function TabEleves({ eleves, setEleves }) {
   function ajouterEleve() {
     setEleves((prev) => [
       ...prev,
-      { id: uid(), nom: "", prenom: "", classe: classeFiltre || "", sexe: "", temps200: null },
+      { id: uid(), nom: "", prenom: "", classe: classeActive, sexe: "", temps200: null },
     ]);
   }
 
@@ -44,9 +40,8 @@ export default function TabEleves({ eleves, setEleves }) {
   }
 
   function reinitialiserPerformances() {
-    if (!classeFiltre) return;
-    if (!confirm(`Effacer le temps au 200m de tous les élèves de la classe ${classeFiltre} ? Cette action est irréversible.`)) return;
-    setEleves((prev) => prev.map((e) => (e.classe === classeFiltre ? { ...e, temps200: null } : e)));
+    if (!confirm(`Effacer le temps au 200m de tous les élèves de la classe ${classeActive} ? Cette action est irréversible.`)) return;
+    setEleves((prev) => prev.map((e) => (e.classe === classeActive ? { ...e, temps200: null } : e)));
   }
 
   return (
@@ -58,7 +53,7 @@ export default function TabEleves({ eleves, setEleves }) {
             onClick={() => setImportOuvert(true)}
             className="flex items-center gap-2 bg-piste-panneau border border-white/10 hover:border-piste-brique px-3 py-2 rounded text-sm"
           >
-            <UploadCloud size={16} /> Importer une classe (CSV)
+            <UploadCloud size={16} /> Importer d'autres élèves
           </button>
           <button
             onClick={ajouterEleve}
@@ -71,42 +66,21 @@ export default function TabEleves({ eleves, setEleves }) {
 
       <TestSalve eleves={eleves} setEleves={setEleves} />
 
-      {classes.length > 0 && (
-        <div className="flex flex-wrap items-center gap-2 mb-4">
+      {eleves.length > 0 && (
+        <div className="flex justify-end mb-3">
           <button
-            onClick={() => setClasseFiltre("")}
-            className={`px-3 py-1 rounded-full text-sm border ${
-              classeFiltre === "" ? "border-piste-brique text-piste-craie" : "border-white/10 text-piste-craie/50"
-            }`}
+            onClick={reinitialiserPerformances}
+            title={`Effacer les temps au 200m de la classe ${classeActive}`}
+            className="flex items-center gap-1.5 text-xs text-piste-craie/50 hover:text-piste-brique border border-white/10 hover:border-piste-brique px-2.5 py-1 rounded-full"
           >
-            Toutes
+            <RotateCcw size={12} /> Réinitialiser les temps de la classe
           </button>
-          {classes.map((c) => (
-            <button
-              key={c}
-              onClick={() => setClasseFiltre(c)}
-              className={`px-3 py-1 rounded-full text-sm border ${
-                classeFiltre === c ? "border-piste-brique text-piste-craie" : "border-white/10 text-piste-craie/50"
-              }`}
-            >
-              {c}
-            </button>
-          ))}
-          {classeFiltre && (
-            <button
-              onClick={reinitialiserPerformances}
-              title={`Effacer les temps au 200m de la classe ${classeFiltre}`}
-              className="flex items-center gap-1.5 text-xs text-piste-craie/50 hover:text-piste-brique border border-white/10 hover:border-piste-brique px-2.5 py-1 rounded-full ml-1"
-            >
-              <RotateCcw size={12} /> Réinitialiser les temps de {classeFiltre}
-            </button>
-          )}
         </div>
       )}
 
-      {visibles.length === 0 ? (
+      {eleves.length === 0 ? (
         <div className="text-piste-craie/50 text-sm border border-dashed border-white/10 rounded-lg p-8 text-center">
-          Aucun élève pour l'instant. Importe la fiche de classe exportée depuis EPS Pro, ou ajoute les élèves un par un.
+          Aucun élève pour l'instant dans cette classe.
         </div>
       ) : (
         <div className="overflow-x-auto rounded-lg border border-white/10">
@@ -122,7 +96,7 @@ export default function TabEleves({ eleves, setEleves }) {
               </tr>
             </thead>
             <tbody>
-              {visibles.map((e) => (
+              {eleves.map((e) => (
                 <tr key={e.id} className="border-t border-white/5">
                   <td className="px-3 py-1.5">
                     <input
@@ -179,7 +153,12 @@ export default function TabEleves({ eleves, setEleves }) {
       )}
 
       {importOuvert && (
-        <ImportEleves elevesExistants={eleves} onImporte={importerEleves} onFermer={() => setImportOuvert(false)} />
+        <ImportEleves
+          elevesExistants={eleves}
+          onImporte={importerEleves}
+          onFermer={() => setImportOuvert(false)}
+          classeForcee={classeActive}
+        />
       )}
     </div>
   );
