@@ -1,6 +1,19 @@
 CHANGELOG — Relais 200m by C. Guilhem
 =====================================
 
+v1.6
+----
+- Nouveau parcours d'ouverture : écran de démarrage avec l'icône de
+  l'application, puis un écran « Mes classes » qui liste les classes déjà
+  importées (avec le nombre d'élèves), permet d'en importer une nouvelle, et
+  d'en supprimer une (élèves, équipes, classement et manches associés sont
+  effacés avec elle). Cliquer sur une classe ouvre l'application sur cette
+  classe. Un bouton « ← Classes » en en-tête permet d'y revenir à tout
+  moment pour changer de classe.
+- L'onglet Élèves n'affiche et ne modifie plus que la classe actuellement
+  ouverte (le filtre par classe n'a plus lieu d'être vu que chaque classe a
+  désormais son propre espace).
+
 v1.5
 ----
 - Sélecteur de classe active en en-tête, disponible dès l'ouverture de
