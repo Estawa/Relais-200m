@@ -1,5 +1,5 @@
 import React, { useRef, useState } from "react";
-import { UploadCloud, Plus, Trash2 } from "lucide-react";
+import { UploadCloud, Plus, Trash2, RotateCcw } from "lucide-react";
 import { formatChrono, parseTempsSaisi } from "../utils/temps";
 import { uid } from "../utils/storage";
 import TestSalve from "./TestSalve";
@@ -43,6 +43,12 @@ export default function TabEleves({ eleves, setEleves }) {
     setEleves((prev) => prev.filter((el) => el.id !== id));
   }
 
+  function reinitialiserPerformances() {
+    if (!classeFiltre) return;
+    if (!confirm(`Effacer le temps au 200m de tous les élèves de la classe ${classeFiltre} ? Cette action est irréversible.`)) return;
+    setEleves((prev) => prev.map((e) => (e.classe === classeFiltre ? { ...e, temps200: null } : e)));
+  }
+
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
@@ -66,7 +72,7 @@ export default function TabEleves({ eleves, setEleves }) {
       <TestSalve eleves={eleves} setEleves={setEleves} />
 
       {classes.length > 0 && (
-        <div className="flex flex-wrap gap-2 mb-4">
+        <div className="flex flex-wrap items-center gap-2 mb-4">
           <button
             onClick={() => setClasseFiltre("")}
             className={`px-3 py-1 rounded-full text-sm border ${
@@ -86,6 +92,15 @@ export default function TabEleves({ eleves, setEleves }) {
               {c}
             </button>
           ))}
+          {classeFiltre && (
+            <button
+              onClick={reinitialiserPerformances}
+              title={`Effacer les temps au 200m de la classe ${classeFiltre}`}
+              className="flex items-center gap-1.5 text-xs text-piste-craie/50 hover:text-piste-brique border border-white/10 hover:border-piste-brique px-2.5 py-1 rounded-full ml-1"
+            >
+              <RotateCcw size={12} /> Réinitialiser les temps de {classeFiltre}
+            </button>
+          )}
         </div>
       )}
 
@@ -143,6 +158,7 @@ export default function TabEleves({ eleves, setEleves }) {
                   </td>
                   <td className="px-3 py-1.5">
                     <input
+                      key={e.temps200}
                       placeholder="ex : 32.4"
                       defaultValue={e.temps200 != null ? (e.temps200 / 1000).toFixed(1) : ""}
                       onBlur={(ev) => modifier(e.id, "temps200", parseTempsSaisi(ev.target.value))}

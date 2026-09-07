@@ -19,7 +19,7 @@ export default function Classement({ eleves, elevesById, classement, setClasseme
   function regenerer() {
     if (
       classement.length > 0 &&
-      !confirm("Reconstruire le classement depuis les temps actuels ? Les espaces placés à la main seront perdus.")
+      !confirm("Reconstruire le classement depuis les temps actuels ? Les espaces et les ajustements (élèves ajoutés/retirés) placés à la main seront perdus.")
     ) {
       return;
     }
@@ -34,6 +34,15 @@ export default function Classement({ eleves, elevesById, classement, setClasseme
 
   function supprimerSeparateur(id) {
     setClassement(classement.filter((t) => t.id !== id));
+  }
+
+  function retirerEleve(tokenId) {
+    setClassement(classement.filter((t) => t.id !== tokenId));
+  }
+
+  function ajouterEleve(eleveId) {
+    if (!eleveId) return;
+    setClassement([...classement, { id: uid(), type: "eleve", eleveId }]);
   }
 
   function onDrop(index) {
@@ -54,6 +63,8 @@ export default function Classement({ eleves, elevesById, classement, setClasseme
   }
 
   const nombreGroupes = groupesDepuisClassement(classement).length;
+  const idsInclus = new Set(classement.filter((t) => t.type === "eleve").map((t) => t.eleveId));
+  const nonInclus = eleves.filter((e) => !idsInclus.has(e.id));
 
   return (
     <div className="bg-piste-panneau rounded-xl border border-white/10 p-5 mb-6">
@@ -100,6 +111,26 @@ export default function Classement({ eleves, elevesById, classement, setClasseme
         </div>
       </div>
 
+      {nonInclus.length > 0 && (
+        <div className="bg-piste-nuit/40 rounded-lg p-3 mb-4">
+          <p className="text-xs text-piste-craie/60 mb-2">
+            Élèves non inclus dans le classement (absents du test, retirés, ou ajoutés en cours de cycle) :
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {nonInclus.map((e) => (
+              <button
+                key={e.id}
+                onClick={() => ajouterEleve(e.id)}
+                title="Ajouter au classement"
+                className="flex items-center gap-1 text-xs border border-white/15 hover:border-piste-pelouse hover:text-piste-pelouse px-2 py-1 rounded"
+              >
+                <Plus size={11} /> {e.prenom} {e.nom}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {classement.length === 0 ? (
         <p className="text-sm text-piste-craie/50">
           Aucun classement pour l'instant. Renseigne d'abord les temps au 200m, puis clique sur « Régénérer ».
@@ -142,7 +173,16 @@ export default function Classement({ eleves, elevesById, classement, setClasseme
                     <span className="flex-1">
                       {el.prenom} {el.nom}
                     </span>
-                    <span className="tabular text-piste-craie/40 text-xs">{(el.temps200 / 1000).toFixed(1)}s</span>
+                    <span className="tabular text-piste-craie/40 text-xs">
+                      {typeof el.temps200 === "number" ? `${(el.temps200 / 1000).toFixed(1)}s` : "—"}
+                    </span>
+                    <button
+                      onClick={() => retirerEleve(tok.id)}
+                      title="Retirer du classement"
+                      className="text-piste-craie/30 hover:text-piste-brique shrink-0"
+                    >
+                      <X size={14} />
+                    </button>
                   </div>
                   {!prochainEstSep && (
                     <button
