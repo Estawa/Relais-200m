@@ -1,6 +1,33 @@
 CHANGELOG — Relais 200m by C. Guilhem
 =====================================
 
+v1.8
+----
+- Résultats : la performance /3 pts se calcule désormais aussi pour les
+  équipes en trinôme, par une règle de trois sur le nombre de coureurs
+  (× 2/3) qui ramène le temps de relais (moyenne et meilleure manche) et
+  la somme des 200m individuels à un équivalent binôme, comparé au même
+  barème officiel. Le reste (positionnement AFLP1, AFLP2, total /12)
+  fonctionne à l'identique des binômes.
+
+v1.7
+----
+- Notation officielle intégrée (situation d'évaluation fin de séquence, 12
+  points, référentiel Bac Pro Terminale Académie de Versailles) :
+  - Onglet Résultats : pour chaque élève d'une équipe de 2, la performance
+    /3 pts (200m individuel + moyenne des 2 relais + indice de
+    transmission) est calculée automatiquement à partir des temps déjà
+    enregistrés ; le positionnement AFLP 1 (/4) et l'AFLP 2 (/5) se
+    saisissent directement, et le total /12 s'affiche par élève.
+  - Onglet Barème : remplacé par la grille officielle complète (200m,
+    moyenne des relais, indice de transmission — filles/garçons), affichée
+    pour référence.
+  - Les 8 points du fil de séquence restent à répartir manuellement, à
+    partir du suivi déjà présent dans l'onglet Rôles.
+  - Le calcul automatique ne s'applique qu'aux équipes de 2 (le barème
+    officiel ne couvre pas les trinômes) ; pour celles-ci, seuls le
+    positionnement et l'AFLP 2 sont saisissables.
+
 v1.6
 ----
 - Nouveau parcours d'ouverture : écran de démarrage avec l'icône de
