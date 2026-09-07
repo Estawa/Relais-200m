@@ -108,3 +108,20 @@ export function noteFinSequence12(eleve, performance) {
   const aflp1 = (positionnement ?? 0) + (perf ?? 0);
   return Math.round((aflp1 + (aflp2 ?? 0)) * 100) / 100;
 }
+
+// Note /8 du fil de séquence (AFLP4 + AFLP5), telle que saisie dans l'onglet Rôles.
+export function noteFilSequence8(eleve) {
+  const a4 = typeof eleve.aflp4Note === "number" ? eleve.aflp4Note : null;
+  const a5 = typeof eleve.aflp5Note === "number" ? eleve.aflp5Note : null;
+  if (a4 == null && a5 == null) return null;
+  return Math.round(((a4 ?? 0) + (a5 ?? 0)) * 100) / 100;
+}
+
+// Note générale /20 = fin de séquence /12 + fil de séquence /8. Renvoie null si aucune des
+// deux parties n'a encore été renseignée.
+export function noteGenerale20(eleve, performance) {
+  const note12 = noteFinSequence12(eleve, performance);
+  const note8 = noteFilSequence8(eleve);
+  if (note12 == null && note8 == null) return null;
+  return Math.round(((note12 ?? 0) + (note8 ?? 0)) * 100) / 100;
+}
