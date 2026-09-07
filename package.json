@@ -1,7 +1,7 @@
 {
   "name": "relais-2x200-pro",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.4.0",
   "type": "module",
   "scripts": {
     "dev": "vite",

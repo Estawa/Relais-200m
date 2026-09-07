@@ -1,6 +1,21 @@
 CHANGELOG — Relais 200m by C. Guilhem
 =====================================
 
+v1.4
+----
+- Import CSV (onglet Élèves) entièrement revu : aperçu par colonne (valeurs
+  d'exemple, sans afficher les titres du fichier), sélection manuelle de ce
+  que représente chaque colonne (Nom, Prénom, Nom+Prénom, Classe, Sexe),
+  colonnes non choisies simplement ignorées, puis aperçu final avec cases à
+  cocher avant import (les élèves déjà présents dans la classe sont mis à
+  jour au lieu d'être dupliqués).
+- Classement & construction des équipes : le bouton Binômes/Trinômes est
+  remplacé par un motif personnalisable (ex. Trinôme, Trinôme, Binôme...),
+  appliqué du plus rapide au plus lent puis répété — permet de mixer
+  librement des équipes de 2 et de 3 dès la génération automatique. Le
+  classement reste ensuite entièrement modifiable à la main (glisser-déposer,
+  espaces à insérer/supprimer), sans aucune contrainte de taille.
+
 v1.3
 ----
 - Test individuel 200m : plus besoin d'indiquer le nombre de coureurs à
