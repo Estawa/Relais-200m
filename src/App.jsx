@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Users, Timer, ListOrdered, Gauge, UploadCloud, Award, ArrowLeft } from "lucide-react";
+import { Users, Timer, ListOrdered, Gauge, UploadCloud, Award, ArrowLeft, Printer } from "lucide-react";
 import { loadState, saveState } from "./utils/storage";
 import { classeDeEquipe } from "./utils/equipes";
 import Splash from "./components/Splash";
@@ -10,6 +10,7 @@ import TabCourse from "./components/TabCourse";
 import TabResultats from "./components/TabResultats";
 import TabBareme from "./components/TabBareme";
 import TabRoles from "./components/TabRoles";
+import RecapTab from "./components/RecapTab";
 
 const ONGLETS = [
   { id: "eleves", numero: "01", label: "Élèves", icon: UploadCloud },
@@ -18,6 +19,7 @@ const ONGLETS = [
   { id: "resultats", numero: "04", label: "Résultats", icon: ListOrdered },
   { id: "roles", numero: "05", label: "Rôles", icon: Award },
   { id: "bareme", numero: "06", label: "Barème", icon: Gauge },
+  { id: "recap", numero: "07", label: "Récap", icon: Printer },
 ];
 
 export default function App() {
@@ -165,7 +167,7 @@ export default function App() {
             <h1 className="font-display text-2xl sm:text-3xl font-800 tracking-wide uppercase leading-none">
               Relais <span className="text-piste-brique">200m</span> <span className="text-piste-ambre">· {classeActive}</span>
             </h1>
-            <p className="text-xs text-piste-craie/50 mt-1">By C. Guilhem <span className="text-piste-craie/25">· v1.9</span></p>
+            <p className="text-xs text-piste-craie/50 mt-1">By C. Guilhem <span className="text-piste-craie/25">· v1.10</span></p>
           </div>
         </div>
       </header>
@@ -217,6 +219,9 @@ export default function App() {
         )}
         {ongletActif === "roles" && <TabRoles eleves={elevesClasse} setEleves={setEleves} />}
         {ongletActif === "bareme" && <TabBareme />}
+        {ongletActif === "recap" && (
+          <RecapTab eleves={elevesClasse} elevesById={elevesById} equipes={equipesClasse} series={seriesClasse} classeActive={classeActive} />
+        )}
       </main>
     </div>
   );
