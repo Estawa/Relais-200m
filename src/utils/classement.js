@@ -1,17 +1,27 @@
 import { uid } from "./storage";
 
 // Construit le classement initial : tous les élèves ayant un temps au 200m,
-// du plus rapide au plus lent, avec un séparateur inséré tous les `taille`
-// élèves (reste fusionné au dernier groupe, comme la formation automatique).
-export function construireClassement(eleves, taille = 2) {
+// du plus rapide au plus lent, en insérant un séparateur selon un motif de
+// tailles de groupe (ex. [3, 3, 2] -> trinôme, trinôme, binôme, puis le motif
+// se répète pour le reste de la liste). Le dernier groupe incomplet est laissé
+// tel quel (à ajuster à la main si besoin).
+export function construireClassement(eleves, motif) {
   const avecTemps = [...eleves]
     .filter((e) => typeof e.temps200 === "number")
     .sort((a, b) => a.temps200 - b.temps200);
 
+  const pattern = motif && motif.length ? motif : [2];
   const tokens = [];
+  let motifIdx = 0;
+  let compteur = 0;
   avecTemps.forEach((el, idx) => {
-    if (idx > 0 && idx % taille === 0) tokens.push({ id: uid(), type: "sep" });
+    if (idx > 0 && compteur === pattern[motifIdx % pattern.length]) {
+      tokens.push({ id: uid(), type: "sep" });
+      motifIdx++;
+      compteur = 0;
+    }
     tokens.push({ id: uid(), type: "eleve", eleveId: el.id });
+    compteur++;
   });
   return tokens;
 }
