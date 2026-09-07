@@ -1,6 +1,12 @@
 CHANGELOG — Relais 200m by C. Guilhem
 =====================================
 
+v1.11
+-----
+- Import élèves : accepte désormais aussi les formats .xlsx, .xls et .ods
+  (exports Pronote inclus), en plus du .csv — même sélection de colonnes,
+  sans avoir besoin d'afficher leurs titres.
+
 v1.10
 -----
 - Résultats : le total /12 s'accompagne désormais du total combiné /20
