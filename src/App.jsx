@@ -45,7 +45,7 @@ export default function App() {
             <h1 className="font-display text-3xl sm:text-4xl font-800 tracking-wide uppercase leading-none">
               Relais <span className="text-piste-brique">200m</span>
             </h1>
-            <p className="text-xs text-piste-craie/50 mt-1">By C. Guilhem <span className="text-piste-craie/25">· v1.3</span></p>
+            <p className="text-xs text-piste-craie/50 mt-1">By C. Guilhem <span className="text-piste-craie/25">· v1.4</span></p>
           </div>
         </div>
       </header>
