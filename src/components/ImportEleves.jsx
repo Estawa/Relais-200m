@@ -48,7 +48,7 @@ export default function ImportEleves({ elevesExistants, onImporte, onFermer, cla
       setCibles({});
       setEtape("colonnes");
     } catch (e) {
-      setErreur("Impossible de lire ce fichier. Format accepté : .csv");
+      setErreur("Impossible de lire ce fichier. Formats acceptés : .csv, .xlsx, .xls, .ods");
     }
   }
 
@@ -117,7 +117,7 @@ export default function ImportEleves({ elevesExistants, onImporte, onFermer, cla
     <div className="fixed inset-0 z-30 bg-black/50 flex items-end sm:items-center justify-center p-0 sm:p-4">
       <div className="bg-piste-nuit border border-white/10 rounded-t-2xl sm:rounded-2xl w-full sm:max-w-2xl max-h-[90vh] overflow-y-auto text-piste-craie">
         <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
-          <h3 className="font-display text-xl tracking-wide">Importer une classe (CSV)</h3>
+          <h3 className="font-display text-xl tracking-wide">Importer une classe</h3>
           <button onClick={onFermer} className="p-1.5 rounded-full hover:bg-white/10 text-piste-craie/60">
             <X size={18} />
           </button>
@@ -132,11 +132,11 @@ export default function ImportEleves({ elevesExistants, onImporte, onFermer, cla
 
           {etape === "choix" && (
             <>
-              <p className="text-sm text-piste-craie/60">Format accepté : .csv (séparateur , ou ;).</p>
+              <p className="text-sm text-piste-craie/60">Formats acceptés : .csv, .xlsx, .xls, .ods (exports Pronote inclus).</p>
               <input
                 ref={inputRef}
                 type="file"
-                accept=".csv,.txt"
+                accept=".csv,.txt,.xlsx,.xls,.ods"
                 onChange={(e) => e.target.files[0] && handleFichier(e.target.files[0])}
                 className="hidden"
               />
