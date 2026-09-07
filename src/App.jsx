@@ -30,14 +30,12 @@ export default function App() {
     return Array.isArray(brut) ? {} : brut; // ancien format (liste unique) : repart de zéro
   });
   const [series, setSeries] = useState(() => loadState("series", []));
-  const [bareme, setBareme] = useState(() => loadState("bareme", { filles: [], garcons: [] }));
   const [classeActive, setClasseActive] = useState(() => loadState("classeActive", ""));
 
   useEffect(() => saveState("eleves", eleves), [eleves]);
   useEffect(() => saveState("equipes", equipes), [equipes]);
   useEffect(() => saveState("classement", classement), [classement]);
   useEffect(() => saveState("series", series), [series]);
-  useEffect(() => saveState("bareme", bareme), [bareme]);
   useEffect(() => saveState("classeActive", classeActive), [classeActive]);
 
   const elevesById = useMemo(() => {
@@ -167,7 +165,7 @@ export default function App() {
             <h1 className="font-display text-2xl sm:text-3xl font-800 tracking-wide uppercase leading-none">
               Relais <span className="text-piste-brique">200m</span> <span className="text-piste-ambre">· {classeActive}</span>
             </h1>
-            <p className="text-xs text-piste-craie/50 mt-1">By C. Guilhem <span className="text-piste-craie/25">· v1.6</span></p>
+            <p className="text-xs text-piste-craie/50 mt-1">By C. Guilhem <span className="text-piste-craie/25">· v1.8</span></p>
           </div>
         </div>
       </header>
@@ -215,10 +213,10 @@ export default function App() {
           <TabCourse equipes={equipesClasse} elevesById={elevesById} series={seriesClasse} setSeries={setSeries} />
         )}
         {ongletActif === "resultats" && (
-          <TabResultats equipes={equipesClasse} elevesById={elevesById} series={seriesClasse} bareme={bareme} />
+          <TabResultats equipes={equipesClasse} elevesById={elevesById} series={seriesClasse} eleves={elevesClasse} setEleves={setEleves} />
         )}
         {ongletActif === "roles" && <TabRoles eleves={elevesClasse} setEleves={setEleves} />}
-        {ongletActif === "bareme" && <TabBareme bareme={bareme} setBareme={setBareme} />}
+        {ongletActif === "bareme" && <TabBareme />}
       </main>
     </div>
   );
