@@ -8,7 +8,7 @@ Application d'évaluation EPS pour le cycle relais 2×200m : constitution des
 
 1. **Élèves** — importe la fiche de classe (CSV nom/prénom/classe exporté
    depuis EPS Pro) ou saisis les élèves à la main. Pour le test individuel
-   200m, lance une salve (peu importe le nombre de coureurs), pointe
+   200m, lance une série (peu importe le nombre de coureurs), pointe
    chaque arrivée, puis identifie les élèves une fois tout le monde passé.
 2. **Équipes** — le classement de tous les élèves testés s'affiche en une
    colonne, du plus rapide au plus lent. Fais glisser un élève pour

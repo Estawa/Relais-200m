@@ -1,6 +1,12 @@
 CHANGELOG — Relais 200m by C. Guilhem
 =====================================
 
+v1.12
+-----
+- Onglet Élèves : le test individuel 200m par « salves » est renommé en
+  « séries » (bouton, textes de l'écran de chrono et d'attribution des
+  temps) ; aucun changement de fonctionnement.
+
 v1.11
 -----
 - Import élèves : accepte désormais aussi les formats .xlsx, .xls et .ods
