@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { UploadCloud, Plus, Trash2, RotateCcw } from "lucide-react";
 import { formatChrono, parseTempsSaisi } from "../utils/temps";
 import { uid } from "../utils/storage";
-import TestSalve from "./TestSalve";
+import TestSerie from "./TestSerie";
 import ImportEleves from "./ImportEleves";
 
 export default function TabEleves({ eleves, setEleves, classeActive }) {
@@ -64,7 +64,7 @@ export default function TabEleves({ eleves, setEleves, classeActive }) {
         </div>
       </div>
 
-      <TestSalve eleves={eleves} setEleves={setEleves} />
+      <TestSerie eleves={eleves} setEleves={setEleves} />
 
       {eleves.length > 0 && (
         <div className="flex justify-end mb-3">
