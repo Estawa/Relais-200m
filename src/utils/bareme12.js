@@ -59,7 +59,12 @@ export function calculerPerformance(eleve, equipe, elevesById, series) {
   if (typeof eleve.temps200 !== "number" || coequipiers.some((c) => typeof c.temps200 !== "number")) return null;
 
   const manches = series
-    .filter((s) => s.equipeIds.includes(equipe.id) && typeof s.arrivals?.[equipe.id] === "number")
+    .filter(
+      (s) =>
+        s.equipeIds.includes(equipe.id) &&
+        typeof s.arrivals?.[equipe.id] === "number" &&
+        s.retenues?.[equipe.id] !== false // retenue par défaut tant qu'elle n'a pas été décochée
+    )
     .map((s) => s.arrivals[equipe.id]);
   if (manches.length === 0) return null;
 
@@ -91,6 +96,99 @@ export function calculerPerformance(eleve, equipe, elevesById, series) {
     meilleurRelaisMs,
     itSecondes: Math.round(itSecondes * 100) / 100,
     equivalentBinome: nb === 3,
+  };
+}
+
+// Note de performance /3 qu'un·e élève aurait obtenue si une seule manche donnée (son
+// temps de relais brut, en ms) avait servi de base au calcul — utile pour afficher, dans
+// l'historique, ce que "vaut" chaque performance prise isolément. Indépendant du statut
+// retenue/écartée de la manche : sert justement à décider si on la retient ou non.
+export function performanceDepuisTempsRelais(eleve, equipe, elevesById, arriveeMs) {
+  if (!equipe || (equipe.membreIds.length !== 2 && equipe.membreIds.length !== 3)) return null;
+  const nb = equipe.membreIds.length;
+  const coequipiers = equipe.membreIds.filter((id) => id !== eleve.id).map((id) => elevesById[id]);
+  if (coequipiers.some((c) => !c)) return null;
+  if (typeof eleve.temps200 !== "number" || coequipiers.some((c) => typeof c.temps200 !== "number")) return null;
+  if (typeof arriveeMs !== "number") return null;
+
+  const ratio = 2 / nb;
+  const sommeIndivBrute = eleve.temps200 + coequipiers.reduce((a, c) => a + c.temps200, 0);
+  const relaisMs = arriveeMs * ratio;
+  const itSecondes = ((sommeIndivBrute - arriveeMs) * ratio) / 1000;
+
+  const bareme200 = eleve.sexe === "F" ? BAREME_200M_FILLES : BAREME_200M_GARCONS;
+  const baremeRelais = eleve.sexe === "F" ? BAREME_RELAIS_FILLES : BAREME_RELAIS_GARCONS;
+
+  const note200 = chercherPoints(eleve.temps200 / 1000, bareme200);
+  const noteRelais = chercherPoints(relaisMs / 1000, baremeRelais);
+  const noteIT = chercherPoints(itSecondes, BAREME_IT);
+
+  const performance = (note200 + noteRelais + noteIT) / 3;
+  return Math.round(performance * 100) / 100;
+}
+
+// Calcule la performance /3 d'un·e élève à partir de TOUTES les manches auxquelles il/elle
+// a participé sur le cycle, quelle que soit l'équipe utilisée pour chacune (son équipe
+// habituelle, ou une équipe du jour formée en cas d'absence d'un·e partenaire). Pour
+// chaque manche, l'équipe réellement utilisée ce jour-là (et donc ses coéquipiers et la
+// taille binôme/trinôme) sert à ramener le temps à un équivalent binôme, avant d'agréger
+// l'ensemble comme le fait calculerPerformance pour une équipe unique.
+export function calculerPerformanceEleve(eleve, elevesById, equipes, series) {
+  if (typeof eleve.temps200 !== "number") return null;
+
+  const points = [];
+  series.forEach((s) => {
+    const teamId = (s.equipeIds || []).find((id) => {
+      const t = equipes.find((e) => e.id === id);
+      return t && t.membreIds.includes(eleve.id);
+    });
+    if (!teamId) return;
+    if (s.retenues?.[teamId] === false) return;
+    const arriveeMs = s.arrivals?.[teamId];
+    if (typeof arriveeMs !== "number") return;
+    const team = equipes.find((e) => e.id === teamId);
+    if (!team || (team.membreIds.length !== 2 && team.membreIds.length !== 3)) return;
+    const coequipiers = team.membreIds.filter((id) => id !== eleve.id).map((id) => elevesById[id]);
+    if (coequipiers.some((c) => !c || typeof c.temps200 !== "number")) return;
+    const nb = team.membreIds.length;
+    const ratio = 2 / nb;
+    const sommeIndivBrute = eleve.temps200 + coequipiers.reduce((a, c) => a + c.temps200, 0);
+    points.push({
+      serieId: s.id,
+      equipeId: teamId,
+      equipeNom: team.nom,
+      adhoc: !!team.adhoc,
+      arriveeMs,
+      relaisEquivMs: arriveeMs * ratio,
+      itSecondes: ((sommeIndivBrute - arriveeMs) * ratio) / 1000,
+    });
+  });
+
+  if (points.length === 0) return null;
+
+  const moyenneRelaisMs = points.reduce((a, p) => a + p.relaisEquivMs, 0) / points.length;
+  const meilleur = points.reduce((a, p) => (p.relaisEquivMs < a.relaisEquivMs ? p : a));
+
+  const bareme200 = eleve.sexe === "F" ? BAREME_200M_FILLES : BAREME_200M_GARCONS;
+  const baremeRelais = eleve.sexe === "F" ? BAREME_RELAIS_FILLES : BAREME_RELAIS_GARCONS;
+
+  const note200 = chercherPoints(eleve.temps200 / 1000, bareme200);
+  const noteRelais = chercherPoints(moyenneRelaisMs / 1000, baremeRelais);
+  const noteIT = chercherPoints(meilleur.itSecondes, BAREME_IT);
+
+  const performance = (note200 + noteRelais + noteIT) / 3;
+
+  return {
+    note200,
+    noteRelais,
+    noteIT,
+    performance: Math.round(performance * 100) / 100,
+    nbManches: points.length,
+    moyenneRelaisMs,
+    meilleurRelaisMs: meilleur.relaisEquivMs,
+    itSecondes: Math.round(meilleur.itSecondes * 100) / 100,
+    aUneEquipeDuJour: points.some((p) => p.adhoc),
+    manches: points,
   };
 }
 
