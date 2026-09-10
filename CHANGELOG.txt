@@ -1,6 +1,44 @@
 CHANGELOG — Relais 200m by C. Guilhem
 =====================================
 
+v1.15
+-----
+- Nouvel outil dans l'onglet Équipes : « Équipes du jour ». En cas d'absence
+  ou de dispense qui prive un binôme/trinôme habituel d'un partenaire, coche
+  qui est présent aujourd'hui et génère en un clic des équipes de
+  remplacement (binômes ou trinômes) à partir des seuls élèves présents.
+  Ces équipes du jour s'ajoutent aux équipes habituelles sans les modifier,
+  sont utilisables normalement dans Évaluation (repérées par la mention
+  « (jour) »), et peuvent être supprimées individuellement une fois la
+  séance terminée.
+- Onglet Résultats et Récap : la note de performance de chaque élève prend
+  désormais en compte TOUTES ses manches sur le cycle, qu'elles aient été
+  courues avec son équipe habituelle ou une équipe du jour — plus besoin
+  qu'une performance en équipe de remplacement soit « perdue ». Le suivi
+  des performances (avec case à cocher pour retenir/écarter chaque manche
+  du calcul de la note) est donc désormais affiché par élève plutôt que
+  par équipe, et précise pour chaque manche quelle équipe a été utilisée.
+
+v1.14
+-----
+- Onglet Résultats : chaque manche listée dans le suivi des performances
+  d'une équipe affiche maintenant, en plus du temps, la note de
+  performance /3 que cette manche donnerait à chaque élève de l'équipe si
+  elle était utilisée seule — pour t'aider à choisir en connaissance de
+  cause quelles performances retenir ou écarter du calcul de la note.
+
+v1.13
+-----
+- Une équipe peut désormais être chronométrée autant de fois que voulu sur
+  l'ensemble du cycle (aucune limite à 2 manches) : chaque nouvelle manche
+  s'ajoute simplement à son historique, qui reste conservé pour suivre la
+  progression de l'équipe.
+- Onglet Résultats : nouveau bloc « Suivi des performances sur le cycle »
+  par équipe, listant toutes ses manches chronométrées ; chaque manche peut
+  être décochée pour l'exclure du calcul de la note (elle reste visible
+  dans l'historique, seule son utilisation pour la note change). Par
+  défaut, toutes les manches chronométrées sont retenues, comme avant.
+
 v1.12
 -----
 - Onglet Élèves : le test individuel 200m par « salves » est renommé en
