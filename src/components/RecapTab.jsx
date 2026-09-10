@@ -1,7 +1,7 @@
 import React from "react";
 import { Printer } from "lucide-react";
 import {
-  calculerPerformance,
+  calculerPerformanceEleve,
   noteFinSequence12,
   noteFilSequence8,
   noteGenerale20,
@@ -12,14 +12,15 @@ function fmt(v, decimales = 1) {
 }
 
 export default function RecapTab({ eleves, elevesById, equipes, series, classeActive }) {
+  const equipesHabituelles = equipes.filter((eq) => !eq.adhoc);
   const lignes = [];
-  [...equipes]
+  [...equipesHabituelles]
     .sort((a, b) => a.nom.localeCompare(b.nom))
     .forEach((eq) => {
       eq.membreIds.forEach((id) => {
         const el = elevesById[id];
         if (!el) return;
-        const perf = calculerPerformance(el, eq, elevesById, series);
+        const perf = calculerPerformanceEleve(el, elevesById, equipes, series);
         lignes.push({
           equipe: eq.nom,
           el,
@@ -31,18 +32,20 @@ export default function RecapTab({ eleves, elevesById, equipes, series, classeAc
       });
     });
 
-  // Élèves non affectés à une équipe : inclus quand même, en bas, pour ne perdre personne.
-  const idsAffectes = new Set(equipes.flatMap((eq) => eq.membreIds));
+  // Élèves non affectés à une équipe habituelle : inclus quand même, en bas, pour ne
+  // perdre personne (leur note, s'ils/elles ont couru en équipe du jour, reste calculée).
+  const idsAffectes = new Set(equipesHabituelles.flatMap((eq) => eq.membreIds));
   eleves
     .filter((e) => !idsAffectes.has(e.id))
     .forEach((el) => {
+      const perf = calculerPerformanceEleve(el, elevesById, equipes, series);
       lignes.push({
         equipe: "—",
         el,
-        perf: null,
-        total12: noteFinSequence12(el, null),
+        perf,
+        total12: noteFinSequence12(el, perf),
         total8: noteFilSequence8(el),
-        total20: noteGenerale20(el, null),
+        total20: noteGenerale20(el, perf),
       });
     });
 

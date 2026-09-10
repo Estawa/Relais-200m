@@ -163,6 +163,7 @@ export default function TabCourse({ equipes, elevesById, series, setSeries }) {
                       <div className="font-display text-lg tracking-wide">
                         <span className="text-piste-ambre">Couloir {serieActive.couloirs?.[eqId] ?? "?"}</span> ·{" "}
                         {eq.nom}
+                        {eq.adhoc && <span className="ml-1.5 text-[10px] text-piste-ambre align-middle">(jour)</span>}
                       </div>
                       <div className="text-xs text-piste-craie/40">
                         {ordre
@@ -238,7 +239,10 @@ export default function TabCourse({ equipes, elevesById, series, setSeries }) {
                 >
                   <input type="checkbox" checked={coche} onChange={() => toggleSelection(eq.id)} className="accent-piste-brique" />
                   <div className="flex-1">
-                    <div className="font-display text-lg tracking-wide leading-none">{eq.nom}</div>
+                    <div className="font-display text-lg tracking-wide leading-none">
+                      {eq.nom}
+                      {eq.adhoc && <span className="ml-1.5 text-[10px] text-piste-ambre align-middle">(jour)</span>}
+                    </div>
                     <div className="text-xs text-piste-craie/40">{noms}</div>
                   </div>
                   {coche && (
