@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Plus, X, Trash2, Users } from "lucide-react";
+import { Plus, X, Trash2, Users, Save, RotateCcw } from "lucide-react";
 import { tempsEquipe, formerEquipesAutomatiquement } from "../utils/equipes";
 import { formatChrono } from "../utils/temps";
 import { uid } from "../utils/storage";
@@ -17,8 +17,15 @@ export default function TabEquipes({ eleves, elevesById, equipes, setEquipes, cl
   const [presentIds, setPresentIds] = useState(() => new Set(eleves.map((e) => e.id)));
   const [tailleJour, setTailleJour] = useState(2);
 
+  // Brouillon des équipes du jour : généré et/ou ajusté à la main ici, mais pas
+  // encore enregistré (donc pas encore utilisable dans Évaluation, ni persisté).
+  // C'est le clic sur "Sauvegarder ces équipes pour ce jour" qui les fait passer
+  // dans `equipes` (adhoc: true) et donc dans le stockage.
+  const [brouillonJour, setBrouillonJour] = useState([]);
+
   useEffect(() => {
     setPresentIds(new Set(eleves.map((e) => e.id)));
+    setBrouillonJour([]);
   }, [classeActive]);
 
   function basculerPresence(eleveId) {
@@ -35,14 +42,55 @@ export default function TabEquipes({ eleves, elevesById, equipes, setEquipes, cl
     if (presents.length < 2) return;
     const groupes = formerEquipesAutomatiquement(presents, tailleJour);
     const dateStr = new Date().toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" });
-    const dejaJour = equipesJour.length;
     const nouvelles = groupes.map((g, i) => ({
       ...g,
-      nom: `Équipe du jour ${dateStr} · ${dejaJour + i + 1}`,
+      nom: `Équipe du jour ${dateStr} · ${i + 1}`,
+    }));
+    setBrouillonJour(nouvelles);
+  }
+
+  function nouvelleEquipeBrouillonVide() {
+    const dateStr = new Date().toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" });
+    setBrouillonJour((prev) => [
+      ...prev,
+      { id: uid(), nom: `Équipe du jour ${dateStr} · ${prev.length + 1}`, membreIds: [] },
+    ]);
+  }
+
+  function renommerBrouillon(id, nom) {
+    setBrouillonJour((prev) => prev.map((eq) => (eq.id === id ? { ...eq, nom } : eq)));
+  }
+
+  function retirerMembreBrouillon(equipeId, eleveId) {
+    setBrouillonJour((prev) =>
+      prev.map((eq) => (eq.id === equipeId ? { ...eq, membreIds: eq.membreIds.filter((id) => id !== eleveId) } : eq))
+    );
+  }
+
+  function ajouterMembreBrouillon(equipeId, eleveId) {
+    if (!eleveId) return;
+    setBrouillonJour((prev) => prev.map((eq) => (eq.id === equipeId ? { ...eq, membreIds: [...eq.membreIds, eleveId] } : eq)));
+  }
+
+  function supprimerEquipeBrouillon(id) {
+    setBrouillonJour((prev) => prev.filter((eq) => eq.id !== id));
+  }
+
+  function viderBrouillon() {
+    if (brouillonJour.length > 0 && !confirm("Abandonner ce brouillon d'équipes du jour (non enregistré) ?")) return;
+    setBrouillonJour([]);
+  }
+
+  function sauvegarderEquipesJour() {
+    const aEnregistrer = brouillonJour.filter((eq) => eq.membreIds.length > 0);
+    if (aEnregistrer.length === 0) return;
+    const nouvelles = aEnregistrer.map((eq) => ({
+      ...eq,
       classe: classeActive,
       adhoc: true,
     }));
     setEquipes((prev) => [...prev, ...nouvelles]);
+    setBrouillonJour([]);
   }
 
   function supprimerEquipeJour(id) {
@@ -105,10 +153,9 @@ export default function TabEquipes({ eleves, elevesById, equipes, setEquipes, cl
           <h3 className="font-display text-xl tracking-wide">Équipes du jour</h3>
         </div>
         <p className="text-xs text-piste-craie/40 mb-3">
-          Pour un jour où des élèves sont absents ou dispensés : décoche qui manque aujourd'hui, puis génère des
-          binômes/trinômes du jour à partir des présents. Ces équipes s'ajoutent aux équipes habituelles sans les
-          modifier, sont utilisables dans Évaluation, et leurs performances comptent dans l'historique personnel de
-          chaque élève.
+          Pour un jour où des élèves sont absents ou dispensés : décoche qui manque aujourd'hui, génère des
+          binômes/trinômes du jour à partir des présents (ou construis-les à la main), ajuste si besoin, puis
+          enregistre. Rien n'est utilisable dans Évaluation tant que ce n'est pas enregistré.
         </p>
 
         <div className="flex flex-wrap gap-1.5 mb-3">
@@ -143,25 +190,111 @@ export default function TabEquipes({ eleves, elevesById, equipes, setEquipes, cl
           <button
             onClick={genererEquipesJour}
             disabled={presentIds.size < 2}
-            className="flex items-center gap-2 bg-piste-ambre disabled:opacity-30 text-piste-nuit font-semibold px-3 py-2 rounded text-sm"
+            className="flex items-center gap-2 bg-piste-panneau border border-piste-ambre/40 disabled:opacity-30 text-piste-craie/80 font-semibold px-3 py-2 rounded text-sm"
           >
-            <Plus size={15} /> Générer les équipes du jour
+            <RotateCcw size={15} /> {brouillonJour.length > 0 ? "Régénérer" : "Générer"} les équipes du jour
+          </button>
+          <button
+            onClick={nouvelleEquipeBrouillonVide}
+            className="flex items-center gap-2 bg-piste-panneau border border-white/10 hover:border-piste-brique px-3 py-2 rounded text-sm"
+          >
+            <Plus size={15} /> Équipe du jour vide
           </button>
         </div>
 
+        {brouillonJour.length > 0 && (
+          <>
+            <div className="mt-4 mb-1.5 text-xs uppercase tracking-wide text-piste-craie/40">
+              Brouillon — pas encore enregistré
+            </div>
+            <div className="grid sm:grid-cols-2 gap-3">
+              {brouillonJour.map((eq) => {
+                const membresBrouillon = new Set(brouillonJour.flatMap((t) => t.membreIds));
+                const dispoAjout = eleves.filter((e) => presentIds.has(e.id) && !membresBrouillon.has(e.id));
+                return (
+                  <div key={eq.id} className="bg-piste-nuit/30 rounded-lg border border-dashed border-piste-ambre/30 p-3">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <input
+                        value={eq.nom}
+                        onChange={(ev) => renommerBrouillon(eq.id, ev.target.value)}
+                        className="bg-transparent text-sm font-semibold tracking-wide focus:outline-none"
+                      />
+                      <button
+                        onClick={() => supprimerEquipeBrouillon(eq.id)}
+                        className="text-piste-craie/30 hover:text-piste-brique"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                    <ul className="space-y-1 mb-1.5">
+                      {eq.membreIds.map((id) => {
+                        const el = elevesById[id];
+                        if (!el) return null;
+                        return (
+                          <li key={id} className="flex items-center justify-between text-xs">
+                            <span>{el.prenom} {el.nom}</span>
+                            <button
+                              onClick={() => retirerMembreBrouillon(eq.id, id)}
+                              className="text-piste-craie/30 hover:text-piste-brique"
+                            >
+                              <X size={12} />
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                    <select
+                      onChange={(ev) => {
+                        ajouterMembreBrouillon(eq.id, ev.target.value);
+                        ev.target.value = "";
+                      }}
+                      defaultValue=""
+                      className="bg-transparent text-xs text-piste-craie/50 focus:outline-none"
+                    >
+                      <option value="">+ Ajouter un·e présent·e…</option>
+                      {dispoAjout.map((el) => (
+                        <option key={el.id} value={el.id} className="text-black">
+                          {el.prenom} {el.nom}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="flex items-center gap-3 mt-3">
+              <button
+                onClick={sauvegarderEquipesJour}
+                className="flex items-center gap-2 bg-piste-ambre text-piste-nuit font-semibold px-3 py-2 rounded text-sm"
+              >
+                <Save size={15} /> Sauvegarder ces équipes pour ce jour
+              </button>
+              <button onClick={viderBrouillon} className="text-xs text-piste-craie/40 hover:text-piste-brique">
+                Abandonner le brouillon
+              </button>
+            </div>
+          </>
+        )}
+
         {equipesJour.length > 0 && (
-          <div className="mt-4 space-y-1.5">
-            {equipesJour.map((eq) => (
-              <div key={eq.id} className="flex items-center justify-between text-sm bg-piste-nuit/30 rounded px-3 py-2">
-                <span>
-                  <span className="text-piste-ambre">{eq.nom}</span> ·{" "}
-                  {eq.membreIds.map((id) => elevesById[id]?.prenom).filter(Boolean).join(", ")}
-                </span>
-                <button onClick={() => supprimerEquipeJour(eq.id)} className="text-piste-craie/30 hover:text-piste-brique">
-                  <Trash2 size={14} />
-                </button>
-              </div>
-            ))}
+          <div className="mt-5">
+            <div className="mb-1.5 text-xs uppercase tracking-wide text-piste-craie/40">
+              Équipes du jour enregistrées
+            </div>
+            <div className="space-y-1.5">
+              {equipesJour.map((eq) => (
+                <div key={eq.id} className="flex items-center justify-between text-sm bg-piste-nuit/30 rounded px-3 py-2">
+                  <span>
+                    <span className="text-piste-ambre">{eq.nom}</span> ·{" "}
+                    {eq.membreIds.map((id) => elevesById[id]?.prenom).filter(Boolean).join(", ")}
+                  </span>
+                  <button onClick={() => supprimerEquipeJour(eq.id)} className="text-piste-craie/30 hover:text-piste-brique">
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </div>
