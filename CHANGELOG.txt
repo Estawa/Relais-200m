@@ -1,6 +1,46 @@
 CHANGELOG — Relais 200m by C. Guilhem
 =====================================
 
+v2.0
+-----
+- IMPORTANT : l'appli passe d'un stockage 100% local (sur l'appareil) à
+  une synchro cloud Firebase, comme les autres applis — nécessaire pour
+  que plusieurs professeurs partagent la même appli sans se marcher
+  dessus, et pour la Vue globale ci-dessous. Un nouveau projet Firebase
+  a été créé pour Relais 200m.
+- Écran de connexion : sélection du nom (administrateur ou collègue) +
+  code d'accès personnel, avant d'accéder à la liste des classes.
+- Nouvel onglet "Accès" (administrateur uniquement) : nom et code
+  personnels modifiables (civilité Mr/Mme + nom), ajout/retrait de
+  collègues avec leur propre code PIN.
+- Nouvel onglet "Vue globale" (administrateur uniquement) : consulte
+  l'espace d'un collègue au choix (classes, équipes, résultats) sans
+  toucher au sien ; "Mes classes" reste l'espace personnel par défaut.
+- Toutes les données (élèves, équipes, classement, manches) sont
+  désormais isolées par professeur — chacun a son propre espace complet.
+  Migration automatique et unique au premier lancement : si tu es
+  l'administrateur et que ton espace cloud est encore vide, l'appli
+  reprend automatiquement ce qui existait en local sur cet appareil
+  avant cette mise à jour (classes, élèves, temps, équipes, classement,
+  manches) — à condition d'ouvrir l'appli mise à jour sur ce même
+  appareil/navigateur au moins une fois.
+
+v1.16
+-----
+- Onglet Équipes, outil « Équipes du jour » : la génération (ou la
+  construction manuelle, nouveau bouton « Équipe du jour vide ») produit
+  désormais un brouillon modifiable — renommer, retirer/ajouter un membre
+  parmi les présents — plutôt que d'enregistrer directement. Tant que le
+  brouillon n'est pas enregistré, il n'est pas utilisable dans Évaluation
+  et n'est pas conservé si tu changes de classe ou fermes l'appli.
+- Nouveau bouton « Sauvegarder ces équipes pour ce jour » : valide le
+  brouillon en une fois, sans avoir à tout régénérer. Le bouton
+  « Générer/Régénérer les équipes du jour » reste disponible pour repartir
+  d'une proposition automatique à partir des présents, utile quand il y a
+  beaucoup d'absences ou de changements à faire.
+- Les équipes du jour déjà enregistrées sont maintenant listées à part,
+  sous l'intitulé « Équipes du jour enregistrées ».
+
 v1.15
 -----
 - Nouvel outil dans l'onglet Équipes : « Équipes du jour ». En cas d'absence
