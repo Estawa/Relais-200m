@@ -1,0 +1,255 @@
+CHANGELOG — Relais 200m by C. Guilhem
+=====================================
+
+v2.0.2
+-----
+- Corrigé : quand une sauvegarde cloud échouait juste après un import (réseau
+  coupé, appli mise en arrière-plan sur mobile...), l'appli retombait par
+  erreur sur l'ancienne sauvegarde d'avant le passage au cloud (v2.0), donc
+  seule la toute première classe réapparaissait et les imports plus récents
+  semblaient avoir disparu. L'appli utilise maintenant toujours la copie la
+  plus récente enregistrée sur l'appareil dans ce cas.
+- Ajout du cache local persistant de Firestore (IndexedDB) : les écritures
+  interrompues par une coupure réseau ou une mise en arrière-plan de l'appli
+  sont désormais mises en attente sur l'appareil et renvoyées automatiquement
+  au serveur dès que la connexion revient, au lieu d'être perdues.
+
+v2.0.1
+-----
+- Correctif important : la synchro cloud pouvait échouer silencieusement
+  (réseau bloqué, coupure...) et faisait alors disparaître les classes/
+  élèves déjà saisis au rechargement de l'appli, sans aucun message.
+- Chaque modification (élèves, équipes, classement, manches) est
+  désormais aussi enregistrée directement sur l'appareil en plus du
+  cloud. Si la sauvegarde ou le chargement cloud échoue, l'appli
+  retombe automatiquement sur cette copie locale au lieu d'afficher
+  une liste vide.
+- Un bandeau d'alerte s'affiche maintenant (écran "Mes classes" et dans
+  l'appli) quand la synchro cloud ne passe pas, pour ne plus jamais que
+  ça passe inaperçu.
+
+v2.0
+-----
+- IMPORTANT : l'appli passe d'un stockage 100% local (sur l'appareil) à
+  une synchro cloud Firebase, comme les autres applis — nécessaire pour
+  que plusieurs professeurs partagent la même appli sans se marcher
+  dessus, et pour la Vue globale ci-dessous. Un nouveau projet Firebase
+  a été créé pour Relais 200m.
+- Écran de connexion : sélection du nom (administrateur ou collègue) +
+  code d'accès personnel, avant d'accéder à la liste des classes.
+- Nouvel onglet "Accès" (administrateur uniquement) : nom et code
+  personnels modifiables (civilité Mr/Mme + nom), ajout/retrait de
+  collègues avec leur propre code PIN.
+- Nouvel onglet "Vue globale" (administrateur uniquement) : consulte
+  l'espace d'un collègue au choix (classes, équipes, résultats) sans
+  toucher au sien ; "Mes classes" reste l'espace personnel par défaut.
+- Toutes les données (élèves, équipes, classement, manches) sont
+  désormais isolées par professeur — chacun a son propre espace complet.
+  Migration automatique et unique au premier lancement : si tu es
+  l'administrateur et que ton espace cloud est encore vide, l'appli
+  reprend automatiquement ce qui existait en local sur cet appareil
+  avant cette mise à jour (classes, élèves, temps, équipes, classement,
+  manches) — à condition d'ouvrir l'appli mise à jour sur ce même
+  appareil/navigateur au moins une fois.
+
+v1.16
+-----
+- Onglet Équipes, outil « Équipes du jour » : la génération (ou la
+  construction manuelle, nouveau bouton « Équipe du jour vide ») produit
+  désormais un brouillon modifiable — renommer, retirer/ajouter un membre
+  parmi les présents — plutôt que d'enregistrer directement. Tant que le
+  brouillon n'est pas enregistré, il n'est pas utilisable dans Évaluation
+  et n'est pas conservé si tu changes de classe ou fermes l'appli.
+- Nouveau bouton « Sauvegarder ces équipes pour ce jour » : valide le
+  brouillon en une fois, sans avoir à tout régénérer. Le bouton
+  « Générer/Régénérer les équipes du jour » reste disponible pour repartir
+  d'une proposition automatique à partir des présents, utile quand il y a
+  beaucoup d'absences ou de changements à faire.
+- Les équipes du jour déjà enregistrées sont maintenant listées à part,
+  sous l'intitulé « Équipes du jour enregistrées ».
+
+v1.15
+-----
+- Nouvel outil dans l'onglet Équipes : « Équipes du jour ». En cas d'absence
+  ou de dispense qui prive un binôme/trinôme habituel d'un partenaire, coche
+  qui est présent aujourd'hui et génère en un clic des équipes de
+  remplacement (binômes ou trinômes) à partir des seuls élèves présents.
+  Ces équipes du jour s'ajoutent aux équipes habituelles sans les modifier,
+  sont utilisables normalement dans Évaluation (repérées par la mention
+  « (jour) »), et peuvent être supprimées individuellement une fois la
+  séance terminée.
+- Onglet Résultats et Récap : la note de performance de chaque élève prend
+  désormais en compte TOUTES ses manches sur le cycle, qu'elles aient été
+  courues avec son équipe habituelle ou une équipe du jour — plus besoin
+  qu'une performance en équipe de remplacement soit « perdue ». Le suivi
+  des performances (avec case à cocher pour retenir/écarter chaque manche
+  du calcul de la note) est donc désormais affiché par élève plutôt que
+  par équipe, et précise pour chaque manche quelle équipe a été utilisée.
+
+v1.14
+-----
+- Onglet Résultats : chaque manche listée dans le suivi des performances
+  d'une équipe affiche maintenant, en plus du temps, la note de
+  performance /3 que cette manche donnerait à chaque élève de l'équipe si
+  elle était utilisée seule — pour t'aider à choisir en connaissance de
+  cause quelles performances retenir ou écarter du calcul de la note.
+
+v1.13
+-----
+- Une équipe peut désormais être chronométrée autant de fois que voulu sur
+  l'ensemble du cycle (aucune limite à 2 manches) : chaque nouvelle manche
+  s'ajoute simplement à son historique, qui reste conservé pour suivre la
+  progression de l'équipe.
+- Onglet Résultats : nouveau bloc « Suivi des performances sur le cycle »
+  par équipe, listant toutes ses manches chronométrées ; chaque manche peut
+  être décochée pour l'exclure du calcul de la note (elle reste visible
+  dans l'historique, seule son utilisation pour la note change). Par
+  défaut, toutes les manches chronométrées sont retenues, comme avant.
+
+v1.12
+-----
+- Onglet Élèves : le test individuel 200m par « salves » est renommé en
+  « séries » (bouton, textes de l'écran de chrono et d'attribution des
+  temps) ; aucun changement de fonctionnement.
+
+v1.11
+-----
+- Import élèves : accepte désormais aussi les formats .xlsx, .xls et .ods
+  (exports Pronote inclus), en plus du .csv — même sélection de colonnes,
+  sans avoir besoin d'afficher leurs titres.
+
+v1.10
+-----
+- Résultats : le total /12 s'accompagne désormais du total combiné /20
+  (fin de séquence /12 + fil de séquence /8 saisi dans Rôles).
+- Nouvel onglet Récap : tableau récapitulatif noir sur blanc pour toute la
+  classe, une ligne par élève (regroupées par équipe), avec le détail
+  complet de la notation (200m, performance 200m/relais/IT, positionnement,
+  AFLP1, AFLP2, total fin de séquence /12, AFLP4, AFLP5, total fil de
+  séquence /8, TOTAL /20). Bouton Imprimer : mise en page paysage, lignes
+  non coupées entre les pages, aucune couleur (noir sur blanc).
+
+v1.9
+----
+- Onglet Rôles : ajout de la notation du fil de séquence (/8 pts, AFLP 4 —
+  rôles sociaux — et AFLP 5 — préparation autonome), sous le suivi des
+  rôles existant. Par élève : choix de la répartition des 8 points (4/4,
+  6/2 ou 2/6), puis degré atteint (1 à 4) pour chaque AFLP avec la plage
+  de points correspondante ; la note se saisit dans cette plage (par
+  défaut le haut de la plage), et le total /8 s'affiche en direct.
+
+v1.8
+----
+- Résultats : la performance /3 pts se calcule désormais aussi pour les
+  équipes en trinôme, par une règle de trois sur le nombre de coureurs
+  (× 2/3) qui ramène le temps de relais (moyenne et meilleure manche) et
+  la somme des 200m individuels à un équivalent binôme, comparé au même
+  barème officiel. Le reste (positionnement AFLP1, AFLP2, total /12)
+  fonctionne à l'identique des binômes.
+
+v1.7
+----
+- Notation officielle intégrée (situation d'évaluation fin de séquence, 12
+  points, référentiel Bac Pro Terminale Académie de Versailles) :
+  - Onglet Résultats : pour chaque élève d'une équipe de 2, la performance
+    /3 pts (200m individuel + moyenne des 2 relais + indice de
+    transmission) est calculée automatiquement à partir des temps déjà
+    enregistrés ; le positionnement AFLP 1 (/4) et l'AFLP 2 (/5) se
+    saisissent directement, et le total /12 s'affiche par élève.
+  - Onglet Barème : remplacé par la grille officielle complète (200m,
+    moyenne des relais, indice de transmission — filles/garçons), affichée
+    pour référence.
+  - Les 8 points du fil de séquence restent à répartir manuellement, à
+    partir du suivi déjà présent dans l'onglet Rôles.
+  - Le calcul automatique ne s'applique qu'aux équipes de 2 (le barème
+    officiel ne couvre pas les trinômes) ; pour celles-ci, seuls le
+    positionnement et l'AFLP 2 sont saisissables.
+
+v1.6
+----
+- Nouveau parcours d'ouverture : écran de démarrage avec l'icône de
+  l'application, puis un écran « Mes classes » qui liste les classes déjà
+  importées (avec le nombre d'élèves), permet d'en importer une nouvelle, et
+  d'en supprimer une (élèves, équipes, classement et manches associés sont
+  effacés avec elle). Cliquer sur une classe ouvre l'application sur cette
+  classe. Un bouton « ← Classes » en en-tête permet d'y revenir à tout
+  moment pour changer de classe.
+- L'onglet Élèves n'affiche et ne modifie plus que la classe actuellement
+  ouverte (le filtre par classe n'a plus lieu d'être vu que chaque classe a
+  désormais son propre espace).
+
+v1.5
+----
+- Sélecteur de classe active en en-tête, disponible dès l'ouverture de
+  l'application : les onglets Équipes, Évaluation et Résultats se limitent
+  désormais à la classe choisie (fini le mélange d'élèves de classes
+  différentes dans une même liste de non-affectés ou une même manche).
+  Les équipes et manches déjà créées restent chacune rattachées à leur
+  classe d'origine.
+- Onglet Élèves : bouton « Réinitialiser les temps » sur une classe
+  sélectionnée, pour repartir sur un nouveau test 200m en début de cycle
+  (efface uniquement le temps, conserve les élèves).
+- Classement & construction des équipes : chaque élève du classement peut
+  désormais être retiré individuellement (bouton croix sur sa ligne) sans
+  reconstruire tout le classement, et les élèves non inclus (absents du
+  test, retirés, ou ajoutés en cours de cycle) sont listés à part avec un
+  bouton pour les ajouter au classement à tout moment.
+
+v1.4
+----
+- Import CSV (onglet Élèves) entièrement revu : aperçu par colonne (valeurs
+  d'exemple, sans afficher les titres du fichier), sélection manuelle de ce
+  que représente chaque colonne (Nom, Prénom, Nom+Prénom, Classe, Sexe),
+  colonnes non choisies simplement ignorées, puis aperçu final avec cases à
+  cocher avant import (les élèves déjà présents dans la classe sont mis à
+  jour au lieu d'être dupliqués).
+- Classement & construction des équipes : le bouton Binômes/Trinômes est
+  remplacé par un motif personnalisable (ex. Trinôme, Trinôme, Binôme...),
+  appliqué du plus rapide au plus lent puis répété — permet de mixer
+  librement des équipes de 2 et de 3 dès la génération automatique. Le
+  classement reste ensuite entièrement modifiable à la main (glisser-déposer,
+  espaces à insérer/supprimer), sans aucune contrainte de taille.
+
+v1.3
+----
+- Test individuel 200m : plus besoin d'indiquer le nombre de coureurs à
+  l'avance. Un seul chrono, on pointe les arrivées au fil de l'eau, et on
+  identifie les élèves une fois la salve terminée.
+- Nouvel outil "Classement & construction des équipes" (onglet Équipes) :
+  liste unique de tous les élèves classés par temps, glisser-déposer pour
+  ajuster un rang, et insertion d'espaces pour délimiter les équipes à la
+  main. Un bouton valide la construction en équipes réelles.
+- La grille "Équipes actuelles" reste disponible en dessous pour affiner
+  après validation (renommer, ajouter/retirer un membre).
+
+v1.2
+----
+- Couloir : une équipe garde désormais le même couloir d'une manche à
+  l'autre (proposé automatiquement, modifiable).
+- Ordre des coureurs dans l'équipe (qui part, qui relaye, qui termine) :
+  tourne automatiquement à chaque nouvelle manche pour cette équipe.
+- Notation : retour à des paliers temps → note (barème filles/garçons),
+  appliqués à la moyenne des 2 courses de l'équipe.
+- Trinômes : leur temps moyen est ramené à un équivalent binôme par une
+  règle de trois (barème conçu pour des équipes de 2) avant consultation
+  du barème.
+- Renommage de l'application : "Relais 200m by C. Guilhem".
+
+v1.1
+----
+- Onglet Élèves : ajout du test individuel 200m par salves de 1 à 7
+  coureurs (un seul chrono, arrivées pointées dans l'ordre, noms
+  attribués après la course).
+- Onglet Équipes : formation automatique par tranches consécutives de
+  niveau (les plus rapides ensemble, puis les suivants, etc.), au lieu
+  d'un équilibrage fort/faible. Choix binômes / trinômes.
+- Onglet Évaluation (ex-Chrono) : attribution d'un couloir par équipe,
+  saisie d'une note de qualité de passage de témoin par échange.
+- Nouvel onglet Rôles : suivi starter / juge de passage de témoin /
+  rangement du matériel par élève sur le cycle.
+
+v1.0
+----
+- Première version : import de la classe (CSV), saisie manuelle des
+  temps au 200m, constitution d'équipes, chronomètre multi-équipes par
+  série avec pointage d'arrivée, classement, barème temps → note.
