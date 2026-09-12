@@ -57,12 +57,19 @@ const DEFAUT = { eleves: [], equipes: [], classement: {}, series: [] };
 export async function loadDonneesProf(prof) {
   try {
     const snap = await getDoc(doc(db, "profs_data", slug(prof)));
-    return snap.exists() ? { ...DEFAUT, ...snap.data() } : { ...DEFAUT };
+    return { data: snap.exists() ? { ...DEFAUT, ...snap.data() } : { ...DEFAUT }, ok: true };
   } catch (e) {
-    return { ...DEFAUT };
+    // Cloud injoignable (réseau, permissions...) : on le signale pour ne pas écraser
+    // les données de l'appareil avec un résultat vide.
+    return { data: { ...DEFAUT }, ok: false };
   }
 }
 
 export async function saveDonneesProf(prof, data) {
-  try { await setDoc(doc(db, "profs_data", slug(prof)), data); } catch (e) {}
+  try {
+    await setDoc(doc(db, "profs_data", slug(prof)), data);
+    return true;
+  } catch (e) {
+    return false;
+  }
 }

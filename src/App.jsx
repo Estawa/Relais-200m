@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Users, Timer, ListOrdered, Gauge, UploadCloud, Award, ArrowLeft, Printer } from "lucide-react";
-import { loadState } from "./utils/storage";
+import { Users, Timer, ListOrdered, Gauge, UploadCloud, Award, ArrowLeft, Printer, AlertTriangle } from "lucide-react";
+import { loadState, saveState } from "./utils/storage";
 import { classeDeEquipe } from "./utils/equipes";
-import { loadAcces, saveAcces, loadDonneesProf, saveDonneesProf } from "./firebase";
+import { loadAcces, saveAcces, loadDonneesProf, saveDonneesProf, slug } from "./firebase";
 import Splash from "./components/Splash";
 import Connexion from "./components/Connexion";
 import Accueil from "./components/Accueil";
@@ -34,6 +34,7 @@ export default function App() {
   const [collegueVu, setCollegueVu] = useState("");
 
   const [chargementDonnees, setChargementDonnees] = useState(false);
+  const [syncOk, setSyncOk] = useState(true);
   const [eleves, setEleves] = useState([]);
   const [equipes, setEquipes] = useState([]);
   const [classement, setClassement] = useState({});
@@ -49,26 +50,37 @@ export default function App() {
   // Migration ponctuelle : si c'est l'administrateur et que son espace cloud est encore vide,
   // reprend les données qui existaient en local sur cet appareil avant la bascule cloud (v2.0),
   // pour ne rien perdre de ce qui avait déjà été importé/saisi.
+  // Filet de sécurité : si le cloud est injoignable (réseau, Firestore bloqué...), on retombe
+  // sur la dernière copie enregistrée sur cet appareil pour ce professeur, plutôt que d'afficher
+  // une liste vide qui écraserait ensuite le cloud dès qu'il redevient joignable.
   useEffect(() => {
     if (!profActif) return;
     let annule = false;
     setChargementDonnees(true);
-    loadDonneesProf(profActif).then((d) => {
+    const cleLocale = "cloudSecours:" + slug(profActif);
+    loadDonneesProf(profActif).then(({ data: d, ok }) => {
       if (annule) return;
-      const espaceVide = (d.eleves || []).length === 0 && (d.equipes || []).length === 0;
       let donnees = d;
-      if (espaceVide && vue === "mes-classes" && estAdmin) {
-        const localEleves = loadState("eleves", []);
-        if (localEleves.length > 0) {
-          donnees = {
-            eleves: localEleves,
-            equipes: loadState("equipes", []),
-            classement: (() => {
-              const brut = loadState("classement", {});
-              return Array.isArray(brut) ? {} : brut;
-            })(),
-            series: loadState("series", []),
-          };
+      if (!ok) {
+        const secours = loadState(cleLocale, null);
+        if (secours) donnees = secours;
+        setSyncOk(false);
+      } else {
+        setSyncOk(true);
+        const espaceVide = (d.eleves || []).length === 0 && (d.equipes || []).length === 0;
+        if (espaceVide && vue === "mes-classes" && estAdmin) {
+          const localEleves = loadState("eleves", []);
+          if (localEleves.length > 0) {
+            donnees = {
+              eleves: localEleves,
+              equipes: loadState("equipes", []),
+              classement: (() => {
+                const brut = loadState("classement", {});
+                return Array.isArray(brut) ? {} : brut;
+              })(),
+              series: loadState("series", []),
+            };
+          }
         }
       }
       setEleves(donnees.eleves || []);
@@ -82,10 +94,16 @@ export default function App() {
   }, [profActif]);
 
   // Sauvegarde le bloc complet à chaque changement (après le chargement initial).
+  // Toujours doublée d'une copie locale sur l'appareil : si l'écriture cloud échoue,
+  // rien n'est perdu et on peut avertir au lieu de laisser disparaître les données en silence.
   useEffect(() => {
     if (!profActif || chargementDonnees) return;
-    saveDonneesProf(profActif, { eleves, equipes, classement, series });
+    const cleLocale = "cloudSecours:" + slug(profActif);
+    const bloc = { eleves, equipes, classement, series };
+    saveState(cleLocale, bloc);
+    saveDonneesProf(profActif, bloc).then(setSyncOk);
   }, [eleves, equipes, classement, series, profActif, chargementDonnees]);
+
 
   const elevesById = useMemo(() => {
     const map = {};
@@ -219,6 +237,7 @@ export default function App() {
         onOuvrir={ouvrirClasse}
         onSupprimer={supprimerClasse}
         onDeconnexion={handleDeconnexion}
+        syncOk={syncOk}
       />
     );
   }
@@ -239,11 +258,19 @@ export default function App() {
               Relais <span className="text-piste-brique">200m</span> <span className="text-piste-ambre">· {classeActive}</span>
             </h1>
             <p className="text-xs text-piste-craie/50 mt-1">
-              By C. Guilhem <span className="text-piste-craie/25">· v2.0 · {profActif}{vue === "globale" ? " (vue globale)" : ""}</span>
+              By C. Guilhem <span className="text-piste-craie/25">· v2.0.1 · {profActif}{vue === "globale" ? " (vue globale)" : ""}</span>
             </p>
           </div>
         </div>
       </header>
+
+      {!syncOk && (
+        <div className="bg-piste-brique/90 text-white text-xs sm:text-sm px-4 py-2 flex items-center gap-2 justify-center text-center">
+          <AlertTriangle size={14} className="shrink-0" />
+          Sauvegarde cloud impossible en ce moment (réseau ?). Tes données restent enregistrées sur cet appareil,
+          la synchro reprendra automatiquement dès que la connexion reviendra.
+        </div>
+      )}
 
       <nav className="bg-piste-panneau/60 border-b border-white/5 overflow-x-auto">
         <div className="max-w-4xl mx-auto flex">
