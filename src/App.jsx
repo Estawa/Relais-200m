@@ -1,8 +1,10 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Users, Timer, ListOrdered, Gauge, UploadCloud, Award, ArrowLeft, Printer } from "lucide-react";
-import { loadState, saveState } from "./utils/storage";
+import { loadState } from "./utils/storage";
 import { classeDeEquipe } from "./utils/equipes";
+import { loadAcces, saveAcces, loadDonneesProf, saveDonneesProf } from "./firebase";
 import Splash from "./components/Splash";
+import Connexion from "./components/Connexion";
 import Accueil from "./components/Accueil";
 import TabEleves from "./components/TabEleves";
 import TabEquipes from "./components/TabEquipes";
@@ -23,22 +25,67 @@ const ONGLETS = [
 ];
 
 export default function App() {
-  const [ecran, setEcran] = useState("splash"); // splash | accueil | app
+  const [ecran, setEcran] = useState("splash"); // splash | connexion | accueil | app
   const [ongletActif, setOngletActif] = useState("eleves");
-  const [eleves, setEleves] = useState(() => loadState("eleves", []));
-  const [equipes, setEquipes] = useState(() => loadState("equipes", []));
-  const [classement, setClassement] = useState(() => {
-    const brut = loadState("classement", {});
-    return Array.isArray(brut) ? {} : brut; // ancien format (liste unique) : repart de zéro
-  });
-  const [series, setSeries] = useState(() => loadState("series", []));
-  const [classeActive, setClasseActive] = useState(() => loadState("classeActive", ""));
 
-  useEffect(() => saveState("eleves", eleves), [eleves]);
-  useEffect(() => saveState("equipes", equipes), [equipes]);
-  useEffect(() => saveState("classement", classement), [classement]);
-  useEffect(() => saveState("series", series), [series]);
-  useEffect(() => saveState("classeActive", classeActive), [classeActive]);
+  const [acces, setAcces] = useState({ pinAdmin: "1234", nomAdmin: "Mr Guilhem", collegues: [] });
+  const [profConnecte, setProfConnecte] = useState(null); // { nom, admin }
+  const [vue, setVue] = useState("mes-classes"); // mes-classes | globale | acces
+  const [collegueVu, setCollegueVu] = useState("");
+
+  const [chargementDonnees, setChargementDonnees] = useState(false);
+  const [eleves, setEleves] = useState([]);
+  const [equipes, setEquipes] = useState([]);
+  const [classement, setClassement] = useState({});
+  const [series, setSeries] = useState([]);
+  const [classeActive, setClasseActive] = useState("");
+
+  const profActif = vue === "globale" ? collegueVu : profConnecte?.nom;
+  const estAdmin = !!profConnecte && profConnecte.nom === acces.nomAdmin;
+
+  useEffect(() => { loadAcces().then(setAcces); }, []);
+
+  // Charge le bloc de données du professeur actif (Mes classes ou Vue globale) dès qu'il change.
+  // Migration ponctuelle : si c'est l'administrateur et que son espace cloud est encore vide,
+  // reprend les données qui existaient en local sur cet appareil avant la bascule cloud (v2.0),
+  // pour ne rien perdre de ce qui avait déjà été importé/saisi.
+  useEffect(() => {
+    if (!profActif) return;
+    let annule = false;
+    setChargementDonnees(true);
+    loadDonneesProf(profActif).then((d) => {
+      if (annule) return;
+      const espaceVide = (d.eleves || []).length === 0 && (d.equipes || []).length === 0;
+      let donnees = d;
+      if (espaceVide && vue === "mes-classes" && estAdmin) {
+        const localEleves = loadState("eleves", []);
+        if (localEleves.length > 0) {
+          donnees = {
+            eleves: localEleves,
+            equipes: loadState("equipes", []),
+            classement: (() => {
+              const brut = loadState("classement", {});
+              return Array.isArray(brut) ? {} : brut;
+            })(),
+            series: loadState("series", []),
+          };
+        }
+      }
+      setEleves(donnees.eleves || []);
+      setEquipes(donnees.equipes || []);
+      setClassement(donnees.classement || {});
+      setSeries(donnees.series || []);
+      setClasseActive("");
+      setChargementDonnees(false);
+    });
+    return () => { annule = true; };
+  }, [profActif]);
+
+  // Sauvegarde le bloc complet à chaque changement (après le chargement initial).
+  useEffect(() => {
+    if (!profActif || chargementDonnees) return;
+    saveDonneesProf(profActif, { eleves, equipes, classement, series });
+  }, [eleves, equipes, classement, series, profActif, chargementDonnees]);
 
   const elevesById = useMemo(() => {
     const map = {};
@@ -81,8 +128,6 @@ export default function App() {
     });
   }
 
-  // Les composants Équipes travaillent sur la liste "vue" (celle de la classe active) mais
-  // toute écriture doit préserver les équipes des autres classes dans le stockage global.
   function setEquipesClasse(equipesOuFn) {
     setEquipes((prev) => {
       const autres = prev.filter((eq) => classeDeEquipe(eq, elevesById) !== classeActive);
@@ -136,18 +181,44 @@ export default function App() {
     if (classeActive === nom) setClasseActive("");
   }
 
+  function handleValideConnexion(p) {
+    setProfConnecte(p);
+    setVue("mes-classes");
+    setCollegueVu("");
+    setEcran("accueil");
+  }
+
+  function handleDeconnexion() {
+    setProfConnecte(null);
+    setEcran("connexion");
+  }
+
   if (ecran === "splash") {
-    return <Splash onTermine={() => setEcran("accueil")} />;
+    return <Splash onTermine={() => setEcran("connexion")} />;
+  }
+
+  if (ecran === "connexion") {
+    const profs = [{ nom: acces.nomAdmin, pin: acces.pinAdmin, admin: true }, ...(acces.collegues || [])];
+    return <Connexion profs={profs} onValide={handleValideConnexion} />;
   }
 
   if (ecran === "accueil") {
     return (
       <Accueil
+        profConnecte={profConnecte}
+        estAdmin={estAdmin}
+        acces={acces}
+        onSauverAcces={(next) => { setAcces(next); saveAcces(next); }}
+        vue={vue}
+        setVue={setVue}
+        collegueVu={collegueVu}
+        setCollegueVu={setCollegueVu}
         eleves={eleves}
         classesInfo={classesInfo}
         onImporte={importerDepuisAccueil}
         onOuvrir={ouvrirClasse}
         onSupprimer={supprimerClasse}
+        onDeconnexion={handleDeconnexion}
       />
     );
   }
@@ -167,7 +238,9 @@ export default function App() {
             <h1 className="font-display text-2xl sm:text-3xl font-800 tracking-wide uppercase leading-none">
               Relais <span className="text-piste-brique">200m</span> <span className="text-piste-ambre">· {classeActive}</span>
             </h1>
-            <p className="text-xs text-piste-craie/50 mt-1">By C. Guilhem <span className="text-piste-craie/25">· v1.15</span></p>
+            <p className="text-xs text-piste-craie/50 mt-1">
+              By C. Guilhem <span className="text-piste-craie/25">· v2.0 · {profActif}{vue === "globale" ? " (vue globale)" : ""}</span>
+            </p>
           </div>
         </div>
       </header>
