@@ -61,14 +61,21 @@ export default function App() {
     loadDonneesProf(profActif).then(({ data: d, ok }) => {
       if (annule) return;
       let donnees = d;
+      const secoursRecent = loadState(cleLocale, null);
+      const secoursNonVide = secoursRecent && ((secoursRecent.eleves || []).length > 0 || (secoursRecent.equipes || []).length > 0);
+      const cloudVide = (d.eleves || []).length === 0 && (d.equipes || []).length === 0;
       if (!ok) {
-        const secours = loadState(cleLocale, null);
-        if (secours) donnees = secours;
+        if (secoursNonVide) donnees = secoursRecent;
         setSyncOk(false);
       } else {
         setSyncOk(true);
-        const espaceVide = (d.eleves || []).length === 0 && (d.equipes || []).length === 0;
-        if (espaceVide && vue === "mes-classes" && estAdmin) {
+        if (cloudVide && secoursNonVide) {
+          // Le cloud répond "vide" mais on a une sauvegarde plus récente sur cet appareil :
+          // la dernière écriture cloud a probablement échoué ou été interrompue (réseau,
+          // appli mise en arrière-plan...). On fait confiance à l'appareil pour ne rien perdre,
+          // et la sauvegarde suivante rattrapera automatiquement le cloud.
+          donnees = secoursRecent;
+        } else if (cloudVide && vue === "mes-classes" && estAdmin) {
           const localEleves = loadState("eleves", []);
           if (localEleves.length > 0) {
             donnees = {
@@ -258,7 +265,7 @@ export default function App() {
               Relais <span className="text-piste-brique">200m</span> <span className="text-piste-ambre">· {classeActive}</span>
             </h1>
             <p className="text-xs text-piste-craie/50 mt-1">
-              By C. Guilhem <span className="text-piste-craie/25">· v2.0.1 · {profActif}{vue === "globale" ? " (vue globale)" : ""}</span>
+              By C. Guilhem <span className="text-piste-craie/25">· v2.0.2 · {profActif}{vue === "globale" ? " (vue globale)" : ""}</span>
             </p>
           </div>
         </div>

@@ -1,5 +1,12 @@
 import { initializeApp } from "firebase/app";
-import { getFirestore, doc, getDoc, setDoc } from "firebase/firestore";
+import {
+  initializeFirestore,
+  persistentLocalCache,
+  persistentSingleTabManager,
+  doc,
+  getDoc,
+  setDoc,
+} from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDD8wvN7yVxmW3FhMTfJFnPdZ1QHcMcSYs",
@@ -11,7 +18,13 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-export const db = getFirestore(app);
+// Cache local persistant (IndexedDB) : les écritures faites hors-ligne ou interrompues
+// (réseau coupé, appli mise en arrière-plan sur mobile...) sont conservées sur l'appareil
+// et renvoyées automatiquement au serveur dès que la connexion revient, au lieu d'être
+// simplement perdues si la page se ferme avant la fin de la requête.
+export const db = initializeFirestore(app, {
+  localCache: persistentLocalCache({ tabManager: persistentSingleTabManager() }),
+});
 
 export function slug(s) {
   return (s || "")
