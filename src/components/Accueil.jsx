@@ -62,11 +62,18 @@ export default function Accueil({
   profConnecte, estAdmin, acces, onSauverAcces,
   vue, setVue, collegueVu, setCollegueVu,
   eleves, classesInfo, onImporte, onOuvrir, onSupprimer, onDeconnexion,
+  syncOk,
 }) {
   const [importOuvert, setImportOuvert] = useState(false);
 
   return (
     <div className="min-h-screen flex flex-col bg-piste-nuit text-piste-craie">
+      {syncOk === false && (
+        <div className="bg-piste-brique/90 text-white text-xs px-4 py-2 text-center">
+          ⚠️ Sauvegarde cloud impossible en ce moment (réseau ?). Tes données restent sur cet appareil et se
+          synchroniseront dès que la connexion reviendra — ne ferme pas l'appli en attendant.
+        </div>
+      )}
       <header className="px-4 pt-8 pb-4 flex flex-col items-center gap-2">
         <img src="/icons/icon-512.png" alt="" className="w-14 h-14 rounded-2xl" />
         <div className="text-center">
