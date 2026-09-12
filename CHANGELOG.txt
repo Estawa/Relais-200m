@@ -1,6 +1,20 @@
 CHANGELOG — Relais 200m by C. Guilhem
 =====================================
 
+v2.0.1
+-----
+- Correctif important : la synchro cloud pouvait échouer silencieusement
+  (réseau bloqué, coupure...) et faisait alors disparaître les classes/
+  élèves déjà saisis au rechargement de l'appli, sans aucun message.
+- Chaque modification (élèves, équipes, classement, manches) est
+  désormais aussi enregistrée directement sur l'appareil en plus du
+  cloud. Si la sauvegarde ou le chargement cloud échoue, l'appli
+  retombe automatiquement sur cette copie locale au lieu d'afficher
+  une liste vide.
+- Un bandeau d'alerte s'affiche maintenant (écran "Mes classes" et dans
+  l'appli) quand la synchro cloud ne passe pas, pour ne plus jamais que
+  ça passe inaperçu.
+
 v2.0
 -----
 - IMPORTANT : l'appli passe d'un stockage 100% local (sur l'appareil) à
