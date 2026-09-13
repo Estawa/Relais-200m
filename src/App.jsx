@@ -365,7 +365,7 @@ export default function App() {
               Relais <span className="text-piste-brique">200m</span> <span className="text-piste-ambre">· {classeActive}</span>
             </h1>
             <p className="text-xs text-piste-craie/50 mt-1">
-              By C. Guilhem <span className="text-piste-craie/25">· v2.1 · {profActif}{vue === "globale" ? " (vue globale)" : ""}</span>
+              By C. Guilhem <span className="text-piste-craie/25">· v2.2 · {profActif}{vue === "globale" ? " (vue globale)" : ""}</span>
             </p>
           </div>
         </div>
@@ -406,7 +406,9 @@ export default function App() {
       </nav>
 
       <main className="flex-1 max-w-4xl w-full mx-auto px-4 py-6 sm:px-6">
-        {ongletActif === "eleves" && <TabEleves eleves={elevesClasse} setEleves={setEleves} classeActive={classeActive} />}
+        {ongletActif === "eleves" && (
+          <TabEleves eleves={elevesClasse} setEleves={setEleves} equipes={equipesClasse} series={seriesClasse} classeActive={classeActive} />
+        )}
         {ongletActif === "equipes" && (
           <TabEquipes
             eleves={elevesClasse}
