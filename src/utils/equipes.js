@@ -55,6 +55,25 @@ export function tempsEquipe(equipe, elevesById) {
   return temps.reduce((a, b) => a + b, 0);
 }
 
+// Toutes les manches auxquelles un·e élève a participé, quelle que soit l'équipe
+// utilisée ce jour-là (équipe habituelle ou équipe du jour formée en cas d'absence).
+// Utilisé à la fois par l'onglet Résultats et par la fiche élève.
+export function manchesEleve(eleveId, equipes, series) {
+  return (series || [])
+    .map((s) => {
+      const equipeId = (s.equipeIds || []).find((id) => {
+        const t = equipes.find((e) => e.id === id);
+        return t && t.membreIds.includes(eleveId);
+      });
+      if (!equipeId || typeof s.arrivals?.[equipeId] !== "number") return null;
+      const equipe = equipes.find((e) => e.id === equipeId);
+      if (!equipe) return null;
+      return { serie: s, equipeId, equipe, temps: s.arrivals[equipeId] };
+    })
+    .filter(Boolean)
+    .sort((a, b) => new Date(a.serie.creeLe) - new Date(b.serie.creeLe));
+}
+
 // Fait tourner l'ordre des coureurs d'une équipe (qui part, qui relaye, qui
 // termine) d'un cran par manche déjà disputée, pour que chacun change de
 // position d'une course à l'autre.
