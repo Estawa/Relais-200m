@@ -1,6 +1,26 @@
 CHANGELOG — Relais 200m by C. Guilhem
 =====================================
 
+v2.2
+-----
+- Ajout d'une fiche par élève, accessible via la petite icône devant chaque
+  ligne dans l'onglet Élèves : nom, prénom, sexe, temps au 200m, et un nouveau
+  champ "Classe d'origine" (utile pour un groupe classe, où chaque élève peut
+  venir d'une classe différente de la classe où il est regroupé ici).
+- La fiche affiche aussi l'historique des performances collectives de l'élève
+  (équipe, manche, temps de chaque course déjà chronométrée sur le cycle).
+- Le bouton "Édition élève" ouvre la même fiche, vide, pour ajouter un nouvel
+  élève.
+
+v2.1.1
+-----
+- Le bouton "Ajouter" fonctionnait en réalité déjà : il ajoutait bien une ligne
+  vide, mais tout en bas du tableau, invisible sans faire défiler dès qu'une
+  classe compte plusieurs élèves — d'où l'impression qu'il ne se passait rien.
+- Remplacé par un bouton "Édition élève" qui ouvre une fenêtre dédiée : choix
+  d'un élève existant à modifier ou supprimer, ou ajout d'un nouvel élève, avec
+  confirmation visible immédiate à chaque action.
+
 v2.1
 -----
 - Refonte importante du stockage cloud : chaque classe a désormais son propre
