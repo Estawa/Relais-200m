@@ -1,5 +1,6 @@
 import React from "react";
 import { formatChrono } from "../utils/temps";
+import { manchesEleve } from "../utils/equipes";
 import {
   calculerPerformanceEleve,
   performanceDepuisTempsRelais,
@@ -25,22 +26,8 @@ export default function TabResultats({ equipes, elevesById, series, setSeries, e
     );
   }
 
-  // Toutes les manches auxquelles un·e élève a participé, quelle que soit l'équipe
-  // utilisée ce jour-là (équipe habituelle ou équipe du jour formée en cas d'absence).
-  function manchesEleve(eleveId) {
-    return series
-      .map((s) => {
-        const equipeId = (s.equipeIds || []).find((id) => {
-          const t = equipes.find((e) => e.id === id);
-          return t && t.membreIds.includes(eleveId);
-        });
-        if (!equipeId || typeof s.arrivals?.[equipeId] !== "number") return null;
-        const equipe = equipes.find((e) => e.id === equipeId);
-        if (!equipe) return null;
-        return { serie: s, equipeId, equipe };
-      })
-      .filter(Boolean)
-      .sort((a, b) => new Date(a.serie.creeLe) - new Date(b.serie.creeLe));
+  function manches(eleveId) {
+    return manchesEleve(eleveId, equipes, series);
   }
 
   const equipesTriees = [...equipes].filter((eq) => !eq.adhoc).sort((a, b) => a.nom.localeCompare(b.nom));
@@ -78,7 +65,7 @@ export default function TabResultats({ equipes, elevesById, series, setSeries, e
                     const total12 = noteFinSequence12(el, perf);
                     const total8 = noteFilSequence8(el);
                     const total20 = noteGenerale20(el, perf);
-                    const manches = manchesEleve(el.id);
+                    const listeManches = manches(el.id);
 
                     return (
                       <div key={id} className="border-t border-white/5 pt-3 first:border-0 first:pt-0">
@@ -99,13 +86,13 @@ export default function TabResultats({ equipes, elevesById, series, setSeries, e
                           </div>
                         </div>
 
-                        {manches.length > 0 && (
+                        {listeManches.length > 0 && (
                           <div className="mb-3">
                             <div className="text-[11px] uppercase text-piste-craie/40 mb-1.5">
-                              Suivi personnel sur le cycle ({manches.length})
+                              Suivi personnel sur le cycle ({listeManches.length})
                             </div>
                             <div className="flex flex-wrap gap-1.5">
-                              {manches.map(({ serie, equipeId, equipe }) => {
+                              {listeManches.map(({ serie, equipeId, equipe }) => {
                                 const retenue = serie.retenues?.[equipeId] !== false;
                                 const arriveeMs = serie.arrivals[equipeId];
                                 const p = performanceDepuisTempsRelais(el, equipe, elevesById, arriveeMs);

@@ -1,12 +1,192 @@
 import React, { useState } from "react";
-import { UploadCloud, Plus, Trash2, RotateCcw } from "lucide-react";
+import { UploadCloud, Pencil, Trash2, RotateCcw, X, IdCard } from "lucide-react";
 import { formatChrono, parseTempsSaisi } from "../utils/temps";
 import { uid } from "../utils/storage";
+import { manchesEleve } from "../utils/equipes";
 import TestSerie from "./TestSerie";
 import ImportEleves from "./ImportEleves";
 
-export default function TabEleves({ eleves, setEleves, classeActive }) {
+const ELEVE_VIDE = { nom: "", prenom: "", sexe: "", classeOrigine: "", temps200: null };
+
+function FicheEleveModal({ eleves, equipes, series, classeActive, idInitial, onAjouter, onModifier, onSupprimer, onFermer }) {
+  const [idSelectionne, setIdSelectionne] = useState(idInitial || "");
+  const [brouillon, setBrouillon] = useState(() => {
+    const e = eleves.find((el) => el.id === idInitial);
+    return e
+      ? { nom: e.nom, prenom: e.prenom, sexe: e.sexe || "", classeOrigine: e.classeOrigine || "", temps200: e.temps200 }
+      : ELEVE_VIDE;
+  });
+
+  const performances = idSelectionne ? manchesEleve(idSelectionne, equipes, series) : [];
+
+  function choisir(id) {
+    setIdSelectionne(id);
+    const e = eleves.find((el) => el.id === id);
+    setBrouillon(
+      e ? { nom: e.nom, prenom: e.prenom, sexe: e.sexe || "", classeOrigine: e.classeOrigine || "", temps200: e.temps200 } : ELEVE_VIDE
+    );
+  }
+
+  function valider() {
+    if (idSelectionne) {
+      onModifier(idSelectionne, brouillon);
+    } else {
+      onAjouter(brouillon);
+      setBrouillon(ELEVE_VIDE);
+    }
+  }
+
+  function supprimerEtFermer() {
+    if (!confirm(`Supprimer ${brouillon.prenom} ${brouillon.nom} de la classe ${classeActive} ?`)) return;
+    onSupprimer(idSelectionne);
+    onFermer();
+  }
+
+  return (
+    <div className="fixed inset-0 z-30 bg-black/50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+      <div className="bg-piste-nuit border border-white/10 rounded-t-2xl sm:rounded-2xl w-full sm:max-w-lg max-h-[90vh] overflow-y-auto text-piste-craie">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
+          <h3 className="font-display text-xl tracking-wide">
+            {idSelectionne ? "Fiche élève" : "Édition élève"} · {classeActive}
+          </h3>
+          <button onClick={onFermer} className="p-1.5 rounded-full hover:bg-white/10 text-piste-craie/60">
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="p-5 space-y-4">
+          <div>
+            <label className="text-xs text-piste-craie/50 block mb-1">Élève</label>
+            <select
+              value={idSelectionne}
+              onChange={(e) => choisir(e.target.value)}
+              className="w-full bg-piste-panneau border border-white/10 rounded-xl px-4 py-3 text-sm"
+            >
+              <option value="">+ Nouvel élève</option>
+              {[...eleves]
+                .sort((a, b) => (a.nom + a.prenom).localeCompare(b.nom + b.prenom))
+                .map((e) => (
+                  <option key={e.id} value={e.id}>
+                    {e.nom} {e.prenom}
+                  </option>
+                ))}
+            </select>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs text-piste-craie/50 block mb-1">Nom</label>
+              <input
+                autoFocus
+                value={brouillon.nom}
+                onChange={(e) => setBrouillon((b) => ({ ...b, nom: e.target.value }))}
+                className="w-full bg-piste-panneau border border-white/10 rounded-xl px-4 py-3 text-sm"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-piste-craie/50 block mb-1">Prénom</label>
+              <input
+                value={brouillon.prenom}
+                onChange={(e) => setBrouillon((b) => ({ ...b, prenom: e.target.value }))}
+                className="w-full bg-piste-panneau border border-white/10 rounded-xl px-4 py-3 text-sm"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs text-piste-craie/50 block mb-1">Sexe</label>
+              <select
+                value={brouillon.sexe}
+                onChange={(e) => setBrouillon((b) => ({ ...b, sexe: e.target.value }))}
+                className="w-full bg-piste-panneau border border-white/10 rounded-xl px-4 py-3 text-sm"
+              >
+                <option value="">—</option>
+                <option value="F">F</option>
+                <option value="M">M</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-xs text-piste-craie/50 block mb-1">Temps 200m (s)</label>
+              <input
+                key={idSelectionne + "-" + brouillon.temps200}
+                placeholder="ex : 32.4"
+                defaultValue={brouillon.temps200 != null ? (brouillon.temps200 / 1000).toFixed(1) : ""}
+                onBlur={(e) => setBrouillon((b) => ({ ...b, temps200: parseTempsSaisi(e.target.value) }))}
+                className="w-full bg-piste-panneau border border-white/10 rounded-xl px-4 py-3 text-sm"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="text-xs text-piste-craie/50 block mb-1">
+              Classe d'origine <span className="text-piste-craie/30">(si groupe classe : d'où vient cet élève)</span>
+            </label>
+            <input
+              placeholder="ex : 2NDE3"
+              value={brouillon.classeOrigine}
+              onChange={(e) => setBrouillon((b) => ({ ...b, classeOrigine: e.target.value }))}
+              className="w-full bg-piste-panneau border border-white/10 rounded-xl px-4 py-3 text-sm"
+            />
+          </div>
+
+          {idSelectionne && (
+            <div>
+              <div className="text-xs text-piste-craie/50 mb-1.5">
+                Performances collectives sur ce cycle {performances.length > 0 ? `(${performances.length})` : ""}
+              </div>
+              {performances.length === 0 ? (
+                <p className="text-xs text-piste-craie/30 border border-dashed border-white/10 rounded-lg px-3 py-2">
+                  Aucune manche courue pour l'instant avec cet élève.
+                </p>
+              ) : (
+                <div className="flex flex-wrap gap-1.5">
+                  {performances.map(({ serie, equipeId, equipe, temps }) => (
+                    <span
+                      key={serie.id}
+                      className="text-xs rounded-full px-2.5 py-1 border border-white/10 bg-piste-panneau text-piste-craie/70"
+                    >
+                      {equipe.nom}
+                      {equipe.adhoc ? " (jour)" : ""} · {serie.nom} · {formatChrono(temps)}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="flex gap-2 pt-2">
+            {idSelectionne && (
+              <button
+                onClick={supprimerEtFermer}
+                className="flex items-center gap-2 border border-piste-brique/60 text-piste-briqueclair hover:bg-piste-brique/20 px-4 py-3 rounded-xl text-sm font-semibold"
+              >
+                <Trash2 size={16} /> Supprimer
+              </button>
+            )}
+            <button
+              onClick={valider}
+              disabled={!brouillon.nom && !brouillon.prenom}
+              className="flex-1 flex items-center justify-center gap-2 bg-piste-brique hover:bg-piste-briqueclair disabled:opacity-40 px-4 py-3 rounded-xl text-sm font-semibold"
+            >
+              {idSelectionne ? "Enregistrer les modifications" : "Ajouter cet élève"}
+            </button>
+          </div>
+          {!idSelectionne && (
+            <p className="text-xs text-piste-craie/40 text-center">
+              L'élève ajouté apparaîtra en bas du tableau, dans la classe {classeActive}.
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function TabEleves({ eleves, setEleves, equipes, series, classeActive }) {
   const [importOuvert, setImportOuvert] = useState(false);
+  const [ficheOuverte, setFicheOuverte] = useState(false);
+  const [idFiche, setIdFiche] = useState("");
 
   function importerEleves(nouveaux) {
     setEleves((prev) => {
@@ -24,15 +204,19 @@ export default function TabEleves({ eleves, setEleves, classeActive }) {
     setImportOuvert(false);
   }
 
-  function ajouterEleve() {
+  function ajouterEleve(donnees) {
     setEleves((prev) => [
       ...prev,
-      { id: uid(), nom: "", prenom: "", classe: classeActive, sexe: "", temps200: null },
+      { id: uid(), classe: classeActive, ...donnees },
     ]);
   }
 
   function modifier(id, champ, valeur) {
     setEleves((prev) => prev.map((el) => (el.id === id ? { ...el, [champ]: valeur } : el)));
+  }
+
+  function modifierPlusieursChamps(id, donnees) {
+    setEleves((prev) => prev.map((el) => (el.id === id ? { ...el, ...donnees } : el)));
   }
 
   function supprimer(id) {
@@ -42,6 +226,11 @@ export default function TabEleves({ eleves, setEleves, classeActive }) {
   function reinitialiserPerformances() {
     if (!confirm(`Effacer le temps au 200m de tous les élèves de la classe ${classeActive} ? Cette action est irréversible.`)) return;
     setEleves((prev) => prev.map((e) => (e.classe === classeActive ? { ...e, temps200: null } : e)));
+  }
+
+  function ouvrirFiche(id) {
+    setIdFiche(id);
+    setFicheOuverte(true);
   }
 
   return (
@@ -56,10 +245,10 @@ export default function TabEleves({ eleves, setEleves, classeActive }) {
             <UploadCloud size={16} /> Importer d'autres élèves
           </button>
           <button
-            onClick={ajouterEleve}
+            onClick={() => ouvrirFiche("")}
             className="flex items-center gap-2 bg-piste-brique hover:bg-piste-briqueclair px-3 py-2 rounded text-sm font-semibold"
           >
-            <Plus size={16} /> Ajouter
+            <Pencil size={16} /> Édition élève
           </button>
         </div>
       </div>
@@ -87,6 +276,7 @@ export default function TabEleves({ eleves, setEleves, classeActive }) {
           <table className="w-full text-sm">
             <thead className="bg-piste-panneau text-piste-craie/50 text-xs uppercase">
               <tr>
+                <th></th>
                 <th className="text-left px-3 py-2">Nom</th>
                 <th className="text-left px-3 py-2">Prénom</th>
                 <th className="text-left px-3 py-2">Classe</th>
@@ -98,6 +288,15 @@ export default function TabEleves({ eleves, setEleves, classeActive }) {
             <tbody>
               {eleves.map((e) => (
                 <tr key={e.id} className="border-t border-white/5">
+                  <td className="pl-2">
+                    <button
+                      onClick={() => ouvrirFiche(e.id)}
+                      title="Voir la fiche de cet élève (performances, classe d'origine...)"
+                      className="text-piste-craie/30 hover:text-piste-ambre"
+                    >
+                      <IdCard size={15} />
+                    </button>
+                  </td>
                   <td className="px-3 py-1.5">
                     <input
                       value={e.nom}
@@ -158,6 +357,20 @@ export default function TabEleves({ eleves, setEleves, classeActive }) {
           onImporte={importerEleves}
           onFermer={() => setImportOuvert(false)}
           classeForcee={classeActive}
+        />
+      )}
+
+      {ficheOuverte && (
+        <FicheEleveModal
+          eleves={eleves}
+          equipes={equipes}
+          series={series}
+          classeActive={classeActive}
+          idInitial={idFiche}
+          onAjouter={ajouterEleve}
+          onModifier={modifierPlusieursChamps}
+          onSupprimer={supprimer}
+          onFermer={() => setFicheOuverte(false)}
         />
       )}
     </div>
