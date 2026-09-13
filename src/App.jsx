@@ -1,8 +1,16 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Users, Timer, ListOrdered, Gauge, UploadCloud, Award, ArrowLeft, Printer, AlertTriangle } from "lucide-react";
-import { loadState, saveState } from "./utils/storage";
+import { loadState, saveState, removeState, listerCles } from "./utils/storage";
 import { classeDeEquipe } from "./utils/equipes";
-import { loadAcces, saveAcces, loadDonneesProf, saveDonneesProf, slug } from "./firebase";
+import {
+  loadAcces,
+  saveAcces,
+  chargerToutesLesClasses,
+  sauverClasse,
+  supprimerClasseCloud,
+  chargerAncienBlocProf,
+  slug,
+} from "./firebase";
 import Splash from "./components/Splash";
 import Connexion from "./components/Connexion";
 import Accueil from "./components/Accueil";
@@ -24,6 +32,42 @@ const ONGLETS = [
   { id: "recap", numero: "07", label: "Récap", icon: Printer },
 ];
 
+const CLASSE_VIDE = { eleves: [], equipes: [], classementTokens: [], series: [] };
+
+// Reconstitue le nouveau modèle (une entrée par classe) à partir de l'ancien bloc
+// "tout dans un seul document" (v2.0 à v2.0.2), pour la migration automatique.
+function decouperParClasse(bloc) {
+  const elevesById = {};
+  (bloc.eleves || []).forEach((e) => { elevesById[e.id] = e; });
+  const resultat = {};
+  const assure = (nom) => {
+    if (!resultat[nom]) resultat[nom] = { eleves: [], equipes: [], classementTokens: [], series: [] };
+    return resultat[nom];
+  };
+  (bloc.eleves || []).forEach((e) => {
+    if (!e.classe) return;
+    assure(e.classe).eleves.push(e);
+  });
+  (bloc.equipes || []).forEach((eq) => {
+    const nom = classeDeEquipe(eq, elevesById);
+    if (!nom) return;
+    assure(nom).equipes.push(eq);
+  });
+  Object.entries(bloc.classement || {}).forEach(([nom, tokens]) => {
+    assure(nom).classementTokens = tokens || [];
+  });
+  const classeParEquipeId = {};
+  Object.entries(resultat).forEach(([nom, d]) => {
+    d.equipes.forEach((eq) => { classeParEquipeId[eq.id] = nom; });
+  });
+  (bloc.series || []).forEach((s) => {
+    const nom = (s.equipeIds || []).map((id) => classeParEquipeId[id]).find(Boolean);
+    if (!nom) return;
+    assure(nom).series.push(s);
+  });
+  return resultat;
+}
+
 export default function App() {
   const [ecran, setEcran] = useState("splash"); // splash | connexion | accueil | app
   const [ongletActif, setOngletActif] = useState("eleves");
@@ -35,10 +79,8 @@ export default function App() {
 
   const [chargementDonnees, setChargementDonnees] = useState(false);
   const [syncOk, setSyncOk] = useState(true);
-  const [eleves, setEleves] = useState([]);
-  const [equipes, setEquipes] = useState([]);
-  const [classement, setClassement] = useState({});
-  const [series, setSeries] = useState([]);
+  // Donnees, indexees par nom de classe : { [nomClasse]: { eleves, equipes, classementTokens, series } }
+  const [classesData, setClassesData] = useState({});
   const [classeActive, setClasseActive] = useState("");
 
   const profActif = vue === "globale" ? collegueVu : profConnecte?.nom;
@@ -46,132 +88,194 @@ export default function App() {
 
   useEffect(() => { loadAcces().then(setAcces); }, []);
 
-  // Charge le bloc de données du professeur actif (Mes classes ou Vue globale) dès qu'il change.
-  // Migration ponctuelle : si c'est l'administrateur et que son espace cloud est encore vide,
-  // reprend les données qui existaient en local sur cet appareil avant la bascule cloud (v2.0),
-  // pour ne rien perdre de ce qui avait déjà été importé/saisi.
-  // Filet de sécurité : si le cloud est injoignable (réseau, Firestore bloqué...), on retombe
-  // sur la dernière copie enregistrée sur cet appareil pour ce professeur, plutôt que d'afficher
-  // une liste vide qui écraserait ensuite le cloud dès qu'il redevient joignable.
+  // Reconstitue, à partir des copies de secours enregistrées sur l'appareil, les classes
+  // d'un professeur donné (utilisé si le cloud est injoignable ou répond "vide" par erreur).
+  function chargerSecoursLocal(prof) {
+    const prefixe = "classeSecours:" + slug(prof) + ":";
+    const resultat = {};
+    listerCles(prefixe).forEach((cle) => {
+      const donnees = loadState(cle, null);
+      if (!donnees) return;
+      const nom = donnees.eleves?.[0]?.classe || donnees.equipes?.[0]?.classe || cle.slice(prefixe.length);
+      resultat[nom] = donnees;
+    });
+    return resultat;
+  }
+
+  // Charge toutes les classes du professeur actif (Mes classes ou Vue globale) dès qu'il change.
+  // Réconciliation classe par classe : pour chaque classe, on compare ce que renvoie le cloud
+  // à la dernière copie enregistrée sur cet appareil, et on garde la plus complète des deux.
+  // Ça protège aussi bien contre un cloud totalement injoignable que contre une écriture
+  // isolée qui aurait échoué juste avant la fermeture de l'appli (le cloud renvoie alors une
+  // version plus ancienne de CETTE classe, sans que les autres classes soient affectées).
   useEffect(() => {
     if (!profActif) return;
     let annule = false;
     setChargementDonnees(true);
-    const cleLocale = "cloudSecours:" + slug(profActif);
-    loadDonneesProf(profActif).then(({ data: d, ok }) => {
+    (async () => {
+      const { classes, ok } = await chargerToutesLesClasses(profActif);
       if (annule) return;
-      let donnees = d;
-      const secoursRecent = loadState(cleLocale, null);
-      const secoursNonVide = secoursRecent && ((secoursRecent.eleves || []).length > 0 || (secoursRecent.equipes || []).length > 0);
-      const cloudVide = (d.eleves || []).length === 0 && (d.equipes || []).length === 0;
+      const secours = chargerSecoursLocal(profActif);
+      const richesse = (d) => (!d ? -1 : (d.eleves || []).length + (d.equipes || []).length + (d.series || []).length);
+
+      let donnees = {};
+      const aReSauver = [];
+
       if (!ok) {
-        if (secoursNonVide) donnees = secoursRecent;
+        donnees = secours;
         setSyncOk(false);
       } else {
         setSyncOk(true);
-        if (cloudVide && secoursNonVide) {
-          // Le cloud répond "vide" mais on a une sauvegarde plus récente sur cet appareil :
-          // la dernière écriture cloud a probablement échoué ou été interrompue (réseau,
-          // appli mise en arrière-plan...). On fait confiance à l'appareil pour ne rien perdre,
-          // et la sauvegarde suivante rattrapera automatiquement le cloud.
-          donnees = secoursRecent;
-        } else if (cloudVide && vue === "mes-classes" && estAdmin) {
-          const localEleves = loadState("eleves", []);
-          if (localEleves.length > 0) {
-            donnees = {
-              eleves: localEleves,
-              equipes: loadState("equipes", []),
-              classement: (() => {
-                const brut = loadState("classement", {});
-                return Array.isArray(brut) ? {} : brut;
-              })(),
-              series: loadState("series", []),
-            };
+        const tousLesNoms = new Set([...Object.keys(classes), ...Object.keys(secours)]);
+        if (tousLesNoms.size === 0 && vue === "mes-classes" && estAdmin) {
+          // Rien nulle part : migration depuis l'ancien modèle "tout dans un seul document"
+          // (v2.0 à v2.0.2), puis en dernier recours depuis la version 100% locale (v1.x).
+          const ancien = await chargerAncienBlocProf(profActif);
+          if (!annule && ancien.ok && (ancien.data.eleves || []).length > 0) {
+            donnees = decouperParClasse(ancien.data);
+            aReSauver.push(...Object.keys(donnees));
+          } else if (!annule) {
+            const localEleves = loadState("eleves", []);
+            if (localEleves.length > 0) {
+              donnees = decouperParClasse({
+                eleves: localEleves,
+                equipes: loadState("equipes", []),
+                classement: (() => {
+                  const brut = loadState("classement", {});
+                  return Array.isArray(brut) ? {} : brut;
+                })(),
+                series: loadState("series", []),
+              });
+              aReSauver.push(...Object.keys(donnees));
+            }
           }
+        } else {
+          tousLesNoms.forEach((nom) => {
+            const duCloud = classes[nom];
+            const local = secours[nom];
+            if (local && richesse(local) > richesse(duCloud)) {
+              donnees[nom] = local;
+              aReSauver.push(nom);
+            } else if (duCloud) {
+              donnees[nom] = duCloud;
+            } else if (local) {
+              donnees[nom] = local;
+              aReSauver.push(nom);
+            }
+          });
         }
       }
-      setEleves(donnees.eleves || []);
-      setEquipes(donnees.equipes || []);
-      setClassement(donnees.classement || {});
-      setSeries(donnees.series || []);
+      if (annule) return;
+      setClassesData(donnees);
       setClasseActive("");
       setChargementDonnees(false);
-    });
+
+      // Rattrape le cloud avec ce qui vient d'être retenu localement (migration ou copie plus
+      // complète que celle du serveur), pour que les sauvegardes suivantes soient déjà à jour.
+      aReSauver.forEach((nom) => {
+        const d = donnees[nom];
+        saveState("classeSecours:" + slug(profActif) + ":" + slug(nom), d);
+        sauverClasse(profActif, nom, d);
+      });
+    })();
     return () => { annule = true; };
   }, [profActif]);
 
-  // Sauvegarde le bloc complet à chaque changement (après le chargement initial).
-  // Toujours doublée d'une copie locale sur l'appareil : si l'écriture cloud échoue,
-  // rien n'est perdu et on peut avertir au lieu de laisser disparaître les données en silence.
+  // Sauvegarde uniquement la classe actuellement ouverte à chaque modification de son contenu.
+  // Toujours doublée d'une copie locale sur l'appareil : si l'écriture cloud échoue, rien n'est
+  // perdu et on peut avertir au lieu de laisser disparaître les données en silence. Comme chaque
+  // classe a son propre document, un échec ne peut plus jamais affecter une autre classe.
+  const donneesClasseActive = classesData[classeActive];
   useEffect(() => {
-    if (!profActif || chargementDonnees) return;
-    const cleLocale = "cloudSecours:" + slug(profActif);
-    const bloc = { eleves, equipes, classement, series };
-    saveState(cleLocale, bloc);
-    saveDonneesProf(profActif, bloc).then(setSyncOk);
-  }, [eleves, equipes, classement, series, profActif, chargementDonnees]);
+    if (!profActif || !classeActive || chargementDonnees || !donneesClasseActive) return;
+    const cle = "classeSecours:" + slug(profActif) + ":" + slug(classeActive);
+    saveState(cle, donneesClasseActive);
+    sauverClasse(profActif, classeActive, donneesClasseActive).then(setSyncOk);
+  }, [donneesClasseActive, classeActive, profActif, chargementDonnees]);
 
+  const classeInfo = classesData[classeActive] || CLASSE_VIDE;
+  const elevesClasse = classeInfo.eleves;
+  const equipesClasse = classeInfo.equipes;
+  const seriesClasse = classeInfo.series;
+  const classementActif = classeInfo.classementTokens;
 
   const elevesById = useMemo(() => {
     const map = {};
-    eleves.forEach((e) => (map[e.id] = e));
+    elevesClasse.forEach((e) => (map[e.id] = e));
     return map;
-  }, [eleves]);
+  }, [elevesClasse]);
 
-  const classesInfo = useMemo(() => {
-    const compte = {};
-    eleves.forEach((e) => {
-      if (!e.classe) return;
-      compte[e.classe] = (compte[e.classe] || 0) + 1;
+  // Vue d'ensemble utilisée par l'écran "Mes classes" (liste des classes + import multi-classes)
+  const eleves = useMemo(() => Object.values(classesData).flatMap((d) => d.eleves), [classesData]);
+  const classesInfo = useMemo(
+    () =>
+      Object.entries(classesData)
+        .map(([nom, d]) => ({ nom, nbEleves: d.eleves.length }))
+        .sort((a, b) => a.nom.localeCompare(b.nom)),
+    [classesData]
+  );
+
+  function setEleves(fnOuValeur) {
+    setClassesData((prev) => {
+      const actuelle = prev[classeActive] || CLASSE_VIDE;
+      const suivants = typeof fnOuValeur === "function" ? fnOuValeur(actuelle.eleves) : fnOuValeur;
+      return { ...prev, [classeActive]: { ...actuelle, eleves: suivants } };
     });
-    return Object.entries(compte)
-      .sort((a, b) => a[0].localeCompare(b[0]))
-      .map(([nom, nbEleves]) => ({ nom, nbEleves }));
-  }, [eleves]);
+  }
 
-  const elevesClasse = useMemo(
-    () => eleves.filter((e) => e.classe === classeActive),
-    [eleves, classeActive]
-  );
+  function setEquipesClasse(fnOuValeur) {
+    setClassesData((prev) => {
+      const actuelle = prev[classeActive] || CLASSE_VIDE;
+      const suivantes = typeof fnOuValeur === "function" ? fnOuValeur(actuelle.equipes) : fnOuValeur;
+      return {
+        ...prev,
+        [classeActive]: {
+          ...actuelle,
+          equipes: suivantes.map((eq) => (eq.classe ? eq : { ...eq, classe: classeActive })),
+        },
+      };
+    });
+  }
 
-  const equipesClasse = useMemo(
-    () => equipes.filter((eq) => classeDeEquipe(eq, elevesById) === classeActive),
-    [equipes, elevesById, classeActive]
-  );
-  const equipeIdsClasse = useMemo(() => new Set(equipesClasse.map((eq) => eq.id)), [equipesClasse]);
-  const seriesClasse = useMemo(
-    () => series.filter((s) => s.equipeIds.some((id) => equipeIdsClasse.has(id))),
-    [series, equipeIdsClasse]
-  );
-
-  const classementActif = classement[classeActive] || [];
   function setClassementActif(tokensOuFn) {
-    setClassement((prev) => {
-      const actuel = prev[classeActive] || [];
-      const suivant = typeof tokensOuFn === "function" ? tokensOuFn(actuel) : tokensOuFn;
-      return { ...prev, [classeActive]: suivant };
+    setClassesData((prev) => {
+      const actuelle = prev[classeActive] || CLASSE_VIDE;
+      const suivant = typeof tokensOuFn === "function" ? tokensOuFn(actuelle.classementTokens) : tokensOuFn;
+      return { ...prev, [classeActive]: { ...actuelle, classementTokens: suivant } };
     });
   }
 
-  function setEquipesClasse(equipesOuFn) {
-    setEquipes((prev) => {
-      const autres = prev.filter((eq) => classeDeEquipe(eq, elevesById) !== classeActive);
-      const actuelles = prev.filter((eq) => classeDeEquipe(eq, elevesById) === classeActive);
-      const suivantes = typeof equipesOuFn === "function" ? equipesOuFn(actuelles) : equipesOuFn;
-      return [...autres, ...suivantes.map((eq) => (eq.classe ? eq : { ...eq, classe: classeActive }))];
+  function setSeries(fnOuValeur) {
+    setClassesData((prev) => {
+      const actuelle = prev[classeActive] || CLASSE_VIDE;
+      const suivantes = typeof fnOuValeur === "function" ? fnOuValeur(actuelle.series) : fnOuValeur;
+      return { ...prev, [classeActive]: { ...actuelle, series: suivantes } };
     });
   }
 
+  // Import depuis l'écran "Mes classes" : peut toucher plusieurs classes à la fois (fichier
+  // multi-classes), en dehors de l'écran d'une classe précise — donc sauvegardé explicitement
+  // ici, classe par classe, plutôt que via la sauvegarde automatique qui ne suit que la classe
+  // actuellement ouverte.
   function importerDepuisAccueil(nouveaux) {
-    setEleves((prev) => {
-      const copie = [...prev];
+    setClassesData((prev) => {
+      const copie = { ...prev };
       nouveaux.forEach((n) => {
-        const idx = copie.findIndex((e) => e.id === n.id);
+        const actuelle = copie[n.classe] || CLASSE_VIDE;
+        const elevesCopie = [...actuelle.eleves];
+        const idx = elevesCopie.findIndex((e) => e.id === n.id);
         if (idx !== -1) {
-          copie[idx] = { ...copie[idx], nom: n.nom, prenom: n.prenom, classe: n.classe, sexe: n.sexe || copie[idx].sexe };
+          elevesCopie[idx] = { ...elevesCopie[idx], nom: n.nom, prenom: n.prenom, classe: n.classe, sexe: n.sexe || elevesCopie[idx].sexe };
         } else {
-          copie.push({ id: n.id, nom: n.nom, prenom: n.prenom, classe: n.classe, sexe: n.sexe, temps200: null });
+          elevesCopie.push({ id: n.id, nom: n.nom, prenom: n.prenom, classe: n.classe, sexe: n.sexe, temps200: null });
         }
+        copie[n.classe] = { ...actuelle, eleves: elevesCopie };
+      });
+      const classesAffectees = new Set(nouveaux.map((n) => n.classe));
+      classesAffectees.forEach((nom) => {
+        const donnees = copie[nom];
+        saveState("classeSecours:" + slug(profActif) + ":" + slug(nom), donnees);
+        sauverClasse(profActif, nom, donnees).then(setSyncOk);
       });
       return copie;
     });
@@ -184,7 +288,7 @@ export default function App() {
   }
 
   function supprimerClasse(nom) {
-    const nbEleves = eleves.filter((e) => e.classe === nom).length;
+    const nbEleves = (classesData[nom]?.eleves || []).length;
     if (
       !confirm(
         `Supprimer définitivement la classe ${nom} ? Ses ${nbEleves} élève(s), leurs équipes, classement et manches enregistrées seront effacés. Cette action est irréversible.`
@@ -192,17 +296,13 @@ export default function App() {
     ) {
       return;
     }
-    const idsEquipesASupprimer = new Set(
-      equipes.filter((eq) => classeDeEquipe(eq, elevesById) === nom).map((eq) => eq.id)
-    );
-    setEleves((prev) => prev.filter((e) => e.classe !== nom));
-    setEquipes((prev) => prev.filter((eq) => !idsEquipesASupprimer.has(eq.id)));
-    setSeries((prev) => prev.filter((s) => !s.equipeIds.some((id) => idsEquipesASupprimer.has(id))));
-    setClassement((prev) => {
+    setClassesData((prev) => {
       const copie = { ...prev };
       delete copie[nom];
       return copie;
     });
+    removeState("classeSecours:" + slug(profActif) + ":" + slug(nom));
+    supprimerClasseCloud(profActif, nom);
     if (classeActive === nom) setClasseActive("");
   }
 
@@ -265,7 +365,7 @@ export default function App() {
               Relais <span className="text-piste-brique">200m</span> <span className="text-piste-ambre">· {classeActive}</span>
             </h1>
             <p className="text-xs text-piste-craie/50 mt-1">
-              By C. Guilhem <span className="text-piste-craie/25">· v2.0.2 · {profActif}{vue === "globale" ? " (vue globale)" : ""}</span>
+              By C. Guilhem <span className="text-piste-craie/25">· v2.1 · {profActif}{vue === "globale" ? " (vue globale)" : ""}</span>
             </p>
           </div>
         </div>
