@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { UploadCloud, Pencil, Trash2, RotateCcw, X, IdCard } from "lucide-react";
+import { UploadCloud, Pencil, Trash2, RotateCcw, X, User } from "lucide-react";
 import { formatChrono, parseTempsSaisi } from "../utils/temps";
 import { uid } from "../utils/storage";
 import { manchesEleve } from "../utils/equipes";
@@ -294,7 +294,7 @@ export default function TabEleves({ eleves, setEleves, equipes, series, classeAc
                       title="Voir la fiche de cet élève (performances, classe d'origine...)"
                       className="text-piste-craie/30 hover:text-piste-ambre"
                     >
-                      <IdCard size={15} />
+                      <User size={15} />
                     </button>
                   </td>
                   <td className="px-3 py-1.5">
