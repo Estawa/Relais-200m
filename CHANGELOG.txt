@@ -1,6 +1,37 @@
 CHANGELOG — Relais 200m by C. Guilhem
 =====================================
 
+v2.1
+-----
+- Refonte importante du stockage cloud : chaque classe a désormais son propre
+  document Firestore (au lieu d'un seul document regroupant toutes les classes
+  d'un professeur). Une écriture qui échoue ou est interrompue (réseau coupé,
+  appli mise en arrière-plan...) ne peut plus jamais affecter une autre classe
+  que celle en cours de modification au même moment.
+- Au chargement, chaque classe est comparée entre le cloud et la dernière copie
+  enregistrée sur l'appareil, et la plus complète des deux est retenue puis
+  resynchronisée. Ça protège aussi bien un cloud injoignable qu'une classe dont
+  la toute dernière modification n'aurait pas fini de s'enregistrer avant la
+  fermeture de l'appli.
+- Migration automatique et unique, au premier lancement de cette version, des
+  classes déjà enregistrées dans l'ancien format (v2.0 à v2.0.2) vers le
+  nouveau : rien à faire, tout est repris tel quel.
+- Import d'un fichier regroupant plusieurs classes à la fois désormais
+  correctement réparti et sauvegardé classe par classe.
+
+v2.0.2
+-----
+- Corrigé : quand une sauvegarde cloud échouait juste après un import (réseau
+  coupé, appli mise en arrière-plan sur mobile...), l'appli retombait par
+  erreur sur l'ancienne sauvegarde d'avant le passage au cloud (v2.0), donc
+  seule la toute première classe réapparaissait et les imports plus récents
+  semblaient avoir disparu. L'appli utilise maintenant toujours la copie la
+  plus récente enregistrée sur l'appareil dans ce cas.
+- Ajout du cache local persistant de Firestore (IndexedDB) : les écritures
+  interrompues par une coupure réseau ou une mise en arrière-plan de l'appli
+  sont désormais mises en attente sur l'appareil et renvoyées automatiquement
+  au serveur dès que la connexion revient, au lieu d'être perdues.
+
 v2.0.1
 -----
 - Correctif important : la synchro cloud pouvait échouer silencieusement
