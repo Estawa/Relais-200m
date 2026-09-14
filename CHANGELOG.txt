@@ -1,6 +1,22 @@
 CHANGELOG — Relais 200m by C. Guilhem
 =====================================
 
+v2.3.0
+-----
+- Import CSV/Excel/ODS : un élève déjà connu sous une autre classe (ex. sa classe d'origine au
+  lieu du bon groupe classe) n'est plus dupliqué — il est reconnu partout, pas seulement dans la
+  classe visée par le fichier. S'il est retrouvé sous une classe différente, il reste où il est
+  et un message récapitule qui est concerné, à corriger manuellement si besoin.
+- Nouveau bouton "Déplacer" sur la fiche de chaque élève (onglet Élèves) : change sa classe en
+  conservant son identifiant, donc ses équipes et manches déjà enregistrées.
+
+v2.2.1
+-----
+- Correctif de build : l'icône "IdCard" utilisée pour le bouton de la fiche
+  élève n'existe pas dans la version de lucide-react installée sur ce projet,
+  ce qui empêchait le déploiement de compiler (erreur Vercel). Remplacée par
+  l'icône "User", standard et disponible partout.
+
 v2.2
 -----
 - Ajout d'une fiche par élève, accessible via la petite icône devant chaque
