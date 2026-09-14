@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { UploadCloud, Pencil, Trash2, RotateCcw, X, User } from "lucide-react";
+import { UploadCloud, Pencil, Trash2, RotateCcw, X, User, ArrowRightLeft } from "lucide-react";
 import { formatChrono, parseTempsSaisi } from "../utils/temps";
 import { uid } from "../utils/storage";
 import { manchesEleve } from "../utils/equipes";
@@ -8,7 +8,7 @@ import ImportEleves from "./ImportEleves";
 
 const ELEVE_VIDE = { nom: "", prenom: "", sexe: "", classeOrigine: "", temps200: null };
 
-function FicheEleveModal({ eleves, equipes, series, classeActive, idInitial, onAjouter, onModifier, onSupprimer, onFermer }) {
+function FicheEleveModal({ eleves, equipes, series, classeActive, classesInfo, idInitial, onAjouter, onModifier, onSupprimer, onDeplacer, onFermer }) {
   const [idSelectionne, setIdSelectionne] = useState(idInitial || "");
   const [brouillon, setBrouillon] = useState(() => {
     const e = eleves.find((el) => el.id === idInitial);
@@ -16,6 +16,8 @@ function FicheEleveModal({ eleves, equipes, series, classeActive, idInitial, onA
       ? { nom: e.nom, prenom: e.prenom, sexe: e.sexe || "", classeOrigine: e.classeOrigine || "", temps200: e.temps200 }
       : ELEVE_VIDE;
   });
+  const [deplacementOuvert, setDeplacementOuvert] = useState(false);
+  const [classeCible, setClasseCible] = useState("");
 
   const performances = idSelectionne ? manchesEleve(idSelectionne, equipes, series) : [];
 
@@ -39,6 +41,12 @@ function FicheEleveModal({ eleves, equipes, series, classeActive, idInitial, onA
   function supprimerEtFermer() {
     if (!confirm(`Supprimer ${brouillon.prenom} ${brouillon.nom} de la classe ${classeActive} ?`)) return;
     onSupprimer(idSelectionne);
+    onFermer();
+  }
+
+  function deplacerEtFermer() {
+    if (!classeCible.trim()) return;
+    onDeplacer(idSelectionne, classeCible);
     onFermer();
   }
 
@@ -164,6 +172,15 @@ function FicheEleveModal({ eleves, equipes, series, classeActive, idInitial, onA
                 <Trash2 size={16} /> Supprimer
               </button>
             )}
+            {idSelectionne && onDeplacer && (
+              <button
+                type="button"
+                onClick={() => setDeplacementOuvert((v) => !v)}
+                className="flex items-center gap-2 border border-white/15 text-piste-craie/80 hover:bg-white/10 px-4 py-3 rounded-xl text-sm font-semibold"
+              >
+                <ArrowRightLeft size={16} /> Déplacer
+              </button>
+            )}
             <button
               onClick={valider}
               disabled={!brouillon.nom && !brouillon.prenom}
@@ -172,6 +189,36 @@ function FicheEleveModal({ eleves, equipes, series, classeActive, idInitial, onA
               {idSelectionne ? "Enregistrer les modifications" : "Ajouter cet élève"}
             </button>
           </div>
+
+          {deplacementOuvert && idSelectionne && (
+            <div className="bg-piste-panneau border border-white/10 rounded-xl p-3 space-y-2">
+              <p className="text-xs text-piste-craie/50">
+                Actuellement dans <span className="font-semibold text-piste-craie">{classeActive}</span>. Ses
+                équipes/manches déjà enregistrées le suivent, où qu'il aille.
+              </p>
+              <div className="flex gap-2">
+                <input
+                  list="classes-disponibles-deplacement"
+                  value={classeCible}
+                  onChange={(e) => setClasseCible(e.target.value)}
+                  placeholder="Classe de destination"
+                  className="flex-1 bg-piste-nuit border border-white/10 rounded-xl px-4 py-2.5 text-sm"
+                />
+                <datalist id="classes-disponibles-deplacement">
+                  {(classesInfo || []).filter((c) => c.nom !== classeActive).map((c) => (
+                    <option key={c.nom} value={c.nom} />
+                  ))}
+                </datalist>
+                <button
+                  onClick={deplacerEtFermer}
+                  disabled={!classeCible.trim()}
+                  className="bg-piste-brique hover:bg-piste-briqueclair disabled:opacity-40 px-4 py-2.5 rounded-xl text-sm font-semibold"
+                >
+                  Confirmer
+                </button>
+              </div>
+            </div>
+          )}
           {!idSelectionne && (
             <p className="text-xs text-piste-craie/40 text-center">
               L'élève ajouté apparaîtra en bas du tableau, dans la classe {classeActive}.
@@ -183,7 +230,7 @@ function FicheEleveModal({ eleves, equipes, series, classeActive, idInitial, onA
   );
 }
 
-export default function TabEleves({ eleves, setEleves, equipes, series, classeActive }) {
+export default function TabEleves({ eleves, setEleves, equipes, series, classeActive, classesInfo, onDeplacerEleve }) {
   const [importOuvert, setImportOuvert] = useState(false);
   const [ficheOuverte, setFicheOuverte] = useState(false);
   const [idFiche, setIdFiche] = useState("");
@@ -366,10 +413,12 @@ export default function TabEleves({ eleves, setEleves, equipes, series, classeAc
           equipes={equipes}
           series={series}
           classeActive={classeActive}
+          classesInfo={classesInfo}
           idInitial={idFiche}
           onAjouter={ajouterEleve}
           onModifier={modifierPlusieursChamps}
           onSupprimer={supprimer}
+          onDeplacer={onDeplacerEleve}
           onFermer={() => setFicheOuverte(false)}
         />
       )}

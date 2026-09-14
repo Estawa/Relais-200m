@@ -83,12 +83,19 @@ export default function ImportEleves({ elevesExistants, onImporte, onFermer, cla
       prenom = sep.prenom;
     }
     const classeBrute = iClasse !== undefined ? String(ligne[iClasse] || "").trim() : "";
-    const classe = classeForcee || classeBrute || classeParDefaut.trim();
+    const classeFichier = classeForcee || classeBrute || classeParDefaut.trim();
     const sexeBrut = iSexe !== undefined ? normaliserSexe(ligne[iSexe]) : "";
+    // Recherché par nom+prénom dans TOUS les élèves connus (elevesExistants n'est pas filtré par
+    // classe) — pas seulement ceux de la classe visée par le fichier, pour ne jamais dupliquer un
+    // élève déjà placé ailleurs (ex. classe d'origine vs groupe classe). S'il est retrouvé sous
+    // une autre classe, il y reste (jamais déplacé automatiquement par un import) ; conflitClasse
+    // permet de le signaler à l'écran.
     const existant = elevesExistants.find(
-      (e) => normaliser(e.nom) === normaliser(nom) && normaliser(e.prenom) === normaliser(prenom) && normaliser(e.classe) === normaliser(classe)
+      (e) => normaliser(e.nom) === normaliser(nom) && normaliser(e.prenom) === normaliser(prenom)
     );
-    return { id: existant ? existant.id : uid(), nom, prenom, classe, sexe: sexeBrut, dejaPresent: !!existant };
+    const classe = existant ? existant.classe : classeFichier;
+    const conflitClasse = existant && normaliser(existant.classe) !== normaliser(classeFichier) ? classeFichier : null;
+    return { id: existant ? existant.id : uid(), nom, prenom, classe, sexe: sexeBrut, dejaPresent: !!existant, conflitClasse };
   }
 
   function valider() {
@@ -99,6 +106,14 @@ export default function ImportEleves({ elevesExistants, onImporte, onFermer, cla
     if (nouveaux.length === 0) {
       setErreur("Aucun élève sélectionné.");
       return;
+    }
+    const conflits = nouveaux.filter((e) => e.conflitClasse);
+    if (conflits.length > 0) {
+      alert(
+        `${conflits.length} élève(s) déjà connu(s) sous une autre classe n'ont pas été déplacés automatiquement (pour éviter tout doublon) :\n\n` +
+        conflits.map((c) => `${c.prenom} ${c.nom} : resté dans ${c.classe} (ce fichier l'indiquait dans ${c.conflitClasse})`).join("\n") +
+        `\n\nVérifie dans la fiche de l'élève s'il faut le déplacer manuellement.`
+      );
     }
     onImporte(nouveaux);
   }
