@@ -223,6 +223,25 @@ export default function App() {
     });
   }
 
+  // Déplace un élève de la classe active vers une autre, en conservant son identifiant (donc son
+  // historique de performances, indexé par id, pas par classe) — seul moyen sûr de corriger un
+  // élève placé au mauvais endroit ; le supprimer puis le recréer casserait ce lien.
+  function deplacerEleveVersClasse(eleveId, nouvelleClasseBrute) {
+    const nouvelleClasse = nouvelleClasseBrute.trim().toUpperCase();
+    if (!nouvelleClasse || nouvelleClasse === classeActive) return;
+    setClassesData((prev) => {
+      const source = prev[classeActive] || CLASSE_VIDE;
+      const eleve = source.eleves.find((e) => e.id === eleveId);
+      if (!eleve) return prev;
+      const cible = prev[nouvelleClasse] || CLASSE_VIDE;
+      return {
+        ...prev,
+        [classeActive]: { ...source, eleves: source.eleves.filter((e) => e.id !== eleveId) },
+        [nouvelleClasse]: { ...cible, eleves: [...cible.eleves, { ...eleve, classe: nouvelleClasse }] }
+      };
+    });
+  }
+
   function setEquipesClasse(fnOuValeur) {
     setClassesData((prev) => {
       const actuelle = prev[classeActive] || CLASSE_VIDE;
@@ -365,7 +384,7 @@ export default function App() {
               Relais <span className="text-piste-brique">200m</span> <span className="text-piste-ambre">· {classeActive}</span>
             </h1>
             <p className="text-xs text-piste-craie/50 mt-1">
-              By C. Guilhem <span className="text-piste-craie/25">· v2.2 · {profActif}{vue === "globale" ? " (vue globale)" : ""}</span>
+              By C. Guilhem <span className="text-piste-craie/25">· v2.2.1 · {profActif}{vue === "globale" ? " (vue globale)" : ""}</span>
             </p>
           </div>
         </div>
@@ -407,7 +426,7 @@ export default function App() {
 
       <main className="flex-1 max-w-4xl w-full mx-auto px-4 py-6 sm:px-6">
         {ongletActif === "eleves" && (
-          <TabEleves eleves={elevesClasse} setEleves={setEleves} equipes={equipesClasse} series={seriesClasse} classeActive={classeActive} />
+          <TabEleves eleves={elevesClasse} setEleves={setEleves} equipes={equipesClasse} series={seriesClasse} classeActive={classeActive} classesInfo={classesInfo} onDeplacerEleve={deplacerEleveVersClasse} />
         )}
         {ongletActif === "equipes" && (
           <TabEquipes
