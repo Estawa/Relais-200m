@@ -1,6 +1,18 @@
 CHANGELOG — Relais 200m by C. Guilhem
 =====================================
 
+v2.5.0
+-----
+- Nouveau "Journal de suivi" dans la fiche élève (onglet Élèves, icône fiche) : une entrée
+  datée par séance, modifiable et supprimable à tout moment, pendant tout le cycle.
+- Chaque entrée comprend : une date (jour de la séance, modifiable), une note libre, un
+  "repère de départ" (nombre de pieds positifs par rapport au coureur relayé, en liste
+  déroulante de 0 à 30) et un "repère de préparation à la course" (nombre de pieds par
+  rapport au 1er plot de la zone de transmission, en liste déroulante de -250 à +250,
+  négatif/nul/positif).
+- Enregistrement automatique à chaque saisie (pas de bouton "Valider" séparé pour le
+  journal), pour une prise de notes rapide pendant la séance.
+
 v2.4.0
 -----
 - Nouvel onglet "Séances" : bibliothèque du cycle complet (échauffement type + 10 séances
