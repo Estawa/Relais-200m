@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Users, Timer, ListOrdered, Gauge, UploadCloud, Award, ArrowLeft, Printer, AlertTriangle } from "lucide-react";
+import { Users, Timer, ListOrdered, Gauge, UploadCloud, Award, ArrowLeft, Printer, AlertTriangle, BookOpen } from "lucide-react";
 import { loadState, saveState, removeState, listerCles } from "./utils/storage";
 import { classeDeEquipe } from "./utils/equipes";
 import {
@@ -21,6 +21,7 @@ import TabResultats from "./components/TabResultats";
 import TabBareme from "./components/TabBareme";
 import TabRoles from "./components/TabRoles";
 import RecapTab from "./components/RecapTab";
+import TabSeances from "./components/TabSeances";
 
 const ONGLETS = [
   { id: "eleves", numero: "01", label: "Élèves", icon: UploadCloud },
@@ -30,6 +31,7 @@ const ONGLETS = [
   { id: "roles", numero: "05", label: "Rôles", icon: Award },
   { id: "bareme", numero: "06", label: "Barème", icon: Gauge },
   { id: "recap", numero: "07", label: "Récap", icon: Printer },
+  { id: "seances", numero: "08", label: "Séances", icon: BookOpen },
 ];
 
 const CLASSE_VIDE = { eleves: [], equipes: [], classementTokens: [], series: [] };
@@ -384,7 +386,7 @@ export default function App() {
               Relais <span className="text-piste-brique">200m</span> <span className="text-piste-ambre">· {classeActive}</span>
             </h1>
             <p className="text-xs text-piste-craie/50 mt-1">
-              By C. Guilhem <span className="text-piste-craie/25">· v2.2.1 · {profActif}{vue === "globale" ? " (vue globale)" : ""}</span>
+              By C. Guilhem <span className="text-piste-craie/25">· v2.4.0 · {profActif}{vue === "globale" ? " (vue globale)" : ""}</span>
             </p>
           </div>
         </div>
@@ -457,6 +459,7 @@ export default function App() {
         {ongletActif === "recap" && (
           <RecapTab eleves={elevesClasse} elevesById={elevesById} equipes={equipesClasse} series={seriesClasse} classeActive={classeActive} />
         )}
+        {ongletActif === "seances" && <TabSeances />}
       </main>
     </div>
   );
