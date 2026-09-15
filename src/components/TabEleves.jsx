@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { UploadCloud, Pencil, Trash2, RotateCcw, X, User, ArrowRightLeft } from "lucide-react";
+import { UploadCloud, Pencil, Trash2, RotateCcw, X, User, ArrowRightLeft, Plus, BookOpen } from "lucide-react";
 import { formatChrono, parseTempsSaisi } from "../utils/temps";
 import { uid } from "../utils/storage";
 import { manchesEleve } from "../utils/equipes";
@@ -7,6 +7,16 @@ import TestSerie from "./TestSerie";
 import ImportEleves from "./ImportEleves";
 
 const ELEVE_VIDE = { nom: "", prenom: "", sexe: "", classeOrigine: "", temps200: null };
+
+// Repère de départ : nombre de pieds positifs, par rapport au coureur relayé
+const OPTIONS_REPERE_DEPART = Array.from({ length: 31 }, (_, i) => i); // 0 à 30
+// Repère de préparation à la course : nombre de pieds (négatif/nul/positif),
+// par rapport au 1er plot de la zone de transmission
+const OPTIONS_REPERE_PREPARATION = Array.from({ length: 501 }, (_, i) => i - 250); // -250 à +250
+
+function dateAujourdhui() {
+  return new Date().toISOString().slice(0, 10);
+}
 
 function FicheEleveModal({ eleves, equipes, series, classeActive, classesInfo, idInitial, onAjouter, onModifier, onSupprimer, onDeplacer, onFermer }) {
   const [idSelectionne, setIdSelectionne] = useState(idInitial || "");
@@ -20,6 +30,24 @@ function FicheEleveModal({ eleves, equipes, series, classeActive, classesInfo, i
   const [classeCible, setClasseCible] = useState("");
 
   const performances = idSelectionne ? manchesEleve(idSelectionne, equipes, series) : [];
+  const eleveActuel = idSelectionne ? eleves.find((el) => el.id === idSelectionne) : null;
+  const journal = eleveActuel?.journal || [];
+
+  function ajouterEntreeJournal() {
+    const nouvelle = { id: uid(), date: dateAujourdhui(), note: "", repereDepart: "", reperePreparation: "" };
+    onModifier(idSelectionne, { journal: [nouvelle, ...journal] });
+  }
+
+  function modifierEntreeJournal(entreeId, champ, valeur) {
+    onModifier(idSelectionne, {
+      journal: journal.map((j) => (j.id === entreeId ? { ...j, [champ]: valeur } : j)),
+    });
+  }
+
+  function supprimerEntreeJournal(entreeId) {
+    if (!confirm("Supprimer cette entrée du journal de suivi ?")) return;
+    onModifier(idSelectionne, { journal: journal.filter((j) => j.id !== entreeId) });
+  }
 
   function choisir(id) {
     setIdSelectionne(id);
@@ -158,6 +186,99 @@ function FicheEleveModal({ eleves, equipes, series, classeActive, classesInfo, i
                       {equipe.adhoc ? " (jour)" : ""} · {serie.nom} · {formatChrono(temps)}
                     </span>
                   ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {idSelectionne && (
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <div className="flex items-center gap-1.5 text-xs text-piste-craie/50">
+                  <BookOpen size={13} /> Journal de suivi {journal.length > 0 ? `(${journal.length})` : ""}
+                </div>
+                <button
+                  type="button"
+                  onClick={ajouterEntreeJournal}
+                  className="flex items-center gap-1 text-xs text-piste-ambre hover:text-piste-briqueclair border border-white/10 hover:border-piste-brique px-2 py-1 rounded-full"
+                >
+                  <Plus size={13} /> Nouvelle entrée
+                </button>
+              </div>
+
+              {journal.length === 0 ? (
+                <p className="text-xs text-piste-craie/30 border border-dashed border-white/10 rounded-lg px-3 py-2">
+                  Aucune entrée pour l'instant. Une entrée par séance : notes, repère de départ, repère de
+                  préparation.
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {[...journal]
+                    .sort((a, b) => (b.date || "").localeCompare(a.date || ""))
+                    .map((entree) => (
+                      <div key={entree.id} className="bg-piste-panneau border border-white/10 rounded-xl p-3 space-y-2">
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="date"
+                            value={entree.date || ""}
+                            onChange={(e) => modifierEntreeJournal(entree.id, "date", e.target.value)}
+                            className="bg-piste-nuit border border-white/10 rounded-lg px-2.5 py-1.5 text-xs flex-1"
+                          />
+                          <button
+                            onClick={() => supprimerEntreeJournal(entree.id)}
+                            className="text-piste-craie/30 hover:text-piste-brique p-1"
+                            title="Supprimer cette entrée"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+
+                        <textarea
+                          value={entree.note || ""}
+                          onChange={(e) => modifierEntreeJournal(entree.id, "note", e.target.value)}
+                          placeholder="Note de suivi (ressenti, consignes données, points à retravailler...)"
+                          rows={2}
+                          className="w-full bg-piste-nuit border border-white/10 rounded-lg px-2.5 py-2 text-xs resize-none"
+                        />
+
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="text-[10px] text-piste-craie/40 block mb-0.5">
+                              Repère départ (pieds, / coureur relayé)
+                            </label>
+                            <select
+                              value={entree.repereDepart ?? ""}
+                              onChange={(e) => modifierEntreeJournal(entree.id, "repereDepart", e.target.value === "" ? "" : Number(e.target.value))}
+                              className="w-full bg-piste-nuit border border-white/10 rounded-lg px-2 py-1.5 text-xs"
+                            >
+                              <option value="">—</option>
+                              {OPTIONS_REPERE_DEPART.map((v) => (
+                                <option key={v} value={v}>
+                                  {v} pied{v > 1 ? "s" : ""}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          <div>
+                            <label className="text-[10px] text-piste-craie/40 block mb-0.5">
+                              Repère préparation (pieds, / 1er plot zone transmission)
+                            </label>
+                            <select
+                              value={entree.reperePreparation ?? ""}
+                              onChange={(e) => modifierEntreeJournal(entree.id, "reperePreparation", e.target.value === "" ? "" : Number(e.target.value))}
+                              className="w-full bg-piste-nuit border border-white/10 rounded-lg px-2 py-1.5 text-xs"
+                            >
+                              <option value="">—</option>
+                              {OPTIONS_REPERE_PREPARATION.map((v) => (
+                                <option key={v} value={v}>
+                                  {v > 0 ? `+${v}` : v} pied{Math.abs(v) > 1 ? "s" : ""}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
                 </div>
               )}
             </div>
@@ -338,7 +459,7 @@ export default function TabEleves({ eleves, setEleves, equipes, series, classeAc
                   <td className="pl-2">
                     <button
                       onClick={() => ouvrirFiche(e.id)}
-                      title="Voir la fiche de cet élève (performances, classe d'origine...)"
+                      title="Voir la fiche de cet élève (performances, journal de suivi, classe d'origine...)"
                       className="text-piste-craie/30 hover:text-piste-ambre"
                     >
                       <User size={15} />
