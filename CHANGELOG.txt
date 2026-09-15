@@ -1,6 +1,18 @@
 CHANGELOG — Relais 200m by C. Guilhem
 =====================================
 
+v2.4.0
+-----
+- Nouvel onglet "Séances" : bibliothèque du cycle complet (échauffement type + 10 séances
+  de 1h30), consultable hors-ligne, indépendante de la classe ouverte. Fiches dépliables,
+  filtrables par thème (Échauffement, Évaluation, Technique, Vitesse, Résistance — plusieurs
+  thèmes cumulables).
+- Les fiches des séances 3 et 8 incluent un schéma des distances de la course en 3x50m
+  (positions de départ/zones de transmission/arrivée, détail zone d'élan + zone de
+  transmission).
+- Contenu de référence figé dans le code de l'appli (src/data/seances.js) : à modifier
+  directement dans le code si le déroulé du cycle évolue d'une année sur l'autre.
+
 v2.3.0
 -----
 - Import CSV/Excel/ODS : un élève déjà connu sous une autre classe (ex. sa classe d'origine au
