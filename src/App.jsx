@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Users, Timer, ListOrdered, Gauge, UploadCloud, Award, ArrowLeft, Printer, AlertTriangle, BookOpen } from "lucide-react";
 import { loadState, saveState, removeState, listerCles } from "./utils/storage";
 import { classeDeEquipe } from "./utils/equipes";
+import { completerCompositions } from "./utils/historique";
 import {
   loadAcces,
   saveAcces,
@@ -198,7 +199,11 @@ export default function App() {
   const classeInfo = classesData[classeActive] || CLASSE_VIDE;
   const elevesClasse = classeInfo.eleves;
   const equipesClasse = classeInfo.equipes;
-  const seriesClasse = classeInfo.series;
+  const seriesClasse = useMemo(
+    () => completerCompositions(classeInfo.series, classeInfo.equipes),
+    [classeInfo.series, classeInfo.equipes]
+  );
+  const modeNoteRelais = classeInfo.modeNoteRelais || "meilleure";
   const classementActif = classeInfo.classementTokens;
 
   const elevesById = useMemo(() => {
@@ -252,6 +257,10 @@ export default function App() {
         ...prev,
         [classeActive]: {
           ...actuelle,
+          // v2.6.0 : avant toute modification des équipes, on fige la composition des manches
+          // déjà enregistrées (sinon une équipe reconstruite ou supprimée "orphelinait" ses
+          // anciennes performances).
+          series: completerCompositions(actuelle.series, actuelle.equipes),
           equipes: suivantes.map((eq) => (eq.classe ? eq : { ...eq, classe: classeActive })),
         },
       };
@@ -270,7 +279,16 @@ export default function App() {
     setClassesData((prev) => {
       const actuelle = prev[classeActive] || CLASSE_VIDE;
       const suivantes = typeof fnOuValeur === "function" ? fnOuValeur(actuelle.series) : fnOuValeur;
-      return { ...prev, [classeActive]: { ...actuelle, series: suivantes } };
+      return { ...prev, [classeActive]: { ...actuelle, series: completerCompositions(suivantes, actuelle.equipes) } };
+    });
+  }
+
+  // Mode de calcul de la note de relais pour l'évaluation finale (par classe) :
+  // "meilleure" = moyenne des 2 meilleures (par défaut), "derniere" = moyenne des 2 dernières.
+  function setModeNoteRelais(mode) {
+    setClassesData((prev) => {
+      const actuelle = prev[classeActive] || CLASSE_VIDE;
+      return { ...prev, [classeActive]: { ...actuelle, modeNoteRelais: mode } };
     });
   }
 
@@ -386,7 +404,7 @@ export default function App() {
               Relais <span className="text-piste-brique">200m</span> <span className="text-piste-ambre">· {classeActive}</span>
             </h1>
             <p className="text-xs text-piste-craie/50 mt-1">
-              By C. Guilhem <span className="text-piste-craie/25">· v2.5.0 · {profActif}{vue === "globale" ? " (vue globale)" : ""}</span>
+              By C. Guilhem <span className="text-piste-craie/25">· v2.7.0 · {profActif}{vue === "globale" ? " (vue globale)" : ""}</span>
             </p>
           </div>
         </div>
@@ -428,7 +446,7 @@ export default function App() {
 
       <main className="flex-1 max-w-4xl w-full mx-auto px-4 py-6 sm:px-6">
         {ongletActif === "eleves" && (
-          <TabEleves eleves={elevesClasse} setEleves={setEleves} equipes={equipesClasse} series={seriesClasse} classeActive={classeActive} classesInfo={classesInfo} onDeplacerEleve={deplacerEleveVersClasse} />
+          <TabEleves eleves={elevesClasse} elevesById={elevesById} setEleves={setEleves} equipes={equipesClasse} series={seriesClasse} modeNoteRelais={modeNoteRelais} classeActive={classeActive} classesInfo={classesInfo} onDeplacerEleve={deplacerEleveVersClasse} />
         )}
         {ongletActif === "equipes" && (
           <TabEquipes
@@ -452,12 +470,14 @@ export default function App() {
             setSeries={setSeries}
             eleves={elevesClasse}
             setEleves={setEleves}
+            modeNoteRelais={modeNoteRelais}
+            setModeNoteRelais={setModeNoteRelais}
           />
         )}
         {ongletActif === "roles" && <TabRoles eleves={elevesClasse} setEleves={setEleves} />}
         {ongletActif === "bareme" && <TabBareme />}
         {ongletActif === "recap" && (
-          <RecapTab eleves={elevesClasse} elevesById={elevesById} equipes={equipesClasse} series={seriesClasse} classeActive={classeActive} />
+          <RecapTab eleves={elevesClasse} elevesById={elevesById} equipes={equipesClasse} series={seriesClasse} classeActive={classeActive} modeNoteRelais={modeNoteRelais} />
         )}
         {ongletActif === "seances" && <TabSeances />}
       </main>
