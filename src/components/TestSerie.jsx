@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Play, Flag, Check, RotateCcw, Square } from "lucide-react";
 import { formatChrono } from "../utils/temps";
+import { ajouterPerf200 } from "../utils/historique";
 
 export default function TestSerie({ eleves, setEleves }) {
   const [phase, setPhase] = useState("config"); // config | chrono | attribution
@@ -45,11 +46,14 @@ export default function TestSerie({ eleves, setEleves }) {
   }
 
   function validerAttribution() {
+    // v2.6.0 : chaque temps est AJOUTÉ à l'historique daté de l'élève (plus d'écrasement) ;
+    // son temps de référence reste automatiquement son meilleur temps.
+    const dateIso = new Date().toISOString();
     setEleves((prev) =>
       prev.map((el) => {
         const idx = attributions.findIndex((id) => id === el.id);
         if (idx === -1) return el;
-        return { ...el, temps200: arrivals[idx] };
+        return ajouterPerf200(el, arrivals[idx], "test", dateIso);
       })
     );
     setPhase("config");

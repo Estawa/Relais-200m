@@ -1,8 +1,18 @@
 import React, { useState } from "react";
-import { UploadCloud, Pencil, Trash2, RotateCcw, X, User, ArrowRightLeft, Plus, BookOpen } from "lucide-react";
+import { UploadCloud, Pencil, Trash2, RotateCcw, X, User, ArrowRightLeft, Plus, BookOpen, Timer, Users, Star } from "lucide-react";
 import { formatChrono, parseTempsSaisi } from "../utils/temps";
 import { uid } from "../utils/storage";
 import { manchesEleve } from "../utils/equipes";
+import {
+  historique200,
+  meilleurePerf200,
+  ajouterPerf200,
+  supprimerPerf200,
+  archiverPerf200,
+  reactiverPerf200,
+  formatDateHeure,
+} from "../utils/historique";
+import { noteTemps200, detailNoteManche, calculerPerformanceEleve, libelleModeNoteRelais } from "../utils/bareme12";
 import TestSerie from "./TestSerie";
 import ImportEleves from "./ImportEleves";
 
@@ -18,7 +28,7 @@ function dateAujourdhui() {
   return new Date().toISOString().slice(0, 10);
 }
 
-function FicheEleveModal({ eleves, equipes, series, classeActive, classesInfo, idInitial, onAjouter, onModifier, onSupprimer, onDeplacer, onFermer }) {
+function FicheEleveModal({ eleves, elevesById, modeNoteRelais, onMajEleve, equipes, series, classeActive, classesInfo, idInitial, onAjouter, onModifier, onSupprimer, onDeplacer, onFermer }) {
   const [idSelectionne, setIdSelectionne] = useState(idInitial || "");
   const [brouillon, setBrouillon] = useState(() => {
     const e = eleves.find((el) => el.id === idInitial);
@@ -31,6 +41,17 @@ function FicheEleveModal({ eleves, equipes, series, classeActive, classesInfo, i
 
   const performances = idSelectionne ? manchesEleve(idSelectionne, equipes, series) : [];
   const eleveActuel = idSelectionne ? eleves.find((el) => el.id === idSelectionne) : null;
+  const hist200 = eleveActuel ? historique200(eleveActuel) : [];
+  const best200 = meilleurePerf200(hist200);
+  const perfGlobale = eleveActuel ? calculerPerformanceEleve(eleveActuel, elevesById, equipes, series, modeNoteRelais) : null;
+  const [nouveau200, setNouveau200] = useState("");
+
+  function ajouterTemps200Fiche() {
+    const t = parseTempsSaisi(nouveau200);
+    if (typeof t !== "number" || !idSelectionne) return;
+    onMajEleve(idSelectionne, (el) => ajouterPerf200(el, t, "saisie"));
+    setNouveau200("");
+  }
   const journal = eleveActuel?.journal || [];
 
   function ajouterEntreeJournal() {
@@ -58,10 +79,13 @@ function FicheEleveModal({ eleves, equipes, series, classeActive, classesInfo, i
   }
 
   function valider() {
+    // Le temps 200m n'est plus modifié ici (il est géré par l'historique ci-dessous) :
+    // on n'envoie que l'identité de l'élève pour ne rien écraser.
+    const { temps200, ...identite } = brouillon;
     if (idSelectionne) {
-      onModifier(idSelectionne, brouillon);
+      onModifier(idSelectionne, identite);
     } else {
-      onAjouter(brouillon);
+      onAjouter(identite, temps200);
       setBrouillon(ELEVE_VIDE);
     }
   }
@@ -143,14 +167,21 @@ function FicheEleveModal({ eleves, equipes, series, classeActive, classesInfo, i
               </select>
             </div>
             <div>
-              <label className="text-xs text-piste-craie/50 block mb-1">Temps 200m (s)</label>
-              <input
-                key={idSelectionne + "-" + brouillon.temps200}
-                placeholder="ex : 32.4"
-                defaultValue={brouillon.temps200 != null ? (brouillon.temps200 / 1000).toFixed(1) : ""}
-                onBlur={(e) => setBrouillon((b) => ({ ...b, temps200: parseTempsSaisi(e.target.value) }))}
-                className="w-full bg-piste-panneau border border-white/10 rounded-xl px-4 py-3 text-sm"
-              />
+              <label className="text-xs text-piste-craie/50 block mb-1">
+                {idSelectionne ? "Meilleur 200m (note)" : "Temps 200m (s)"}
+              </label>
+              {idSelectionne ? (
+                <div className="w-full bg-piste-panneau/50 border border-white/10 rounded-xl px-4 py-3 text-sm tabular">
+                  {best200 ? `${(best200.temps / 1000).toFixed(1)} s` : "—"}
+                </div>
+              ) : (
+                <input
+                  placeholder="ex : 32.4"
+                  defaultValue=""
+                  onBlur={(e) => setBrouillon((b) => ({ ...b, temps200: parseTempsSaisi(e.target.value) }))}
+                  className="w-full bg-piste-panneau border border-white/10 rounded-xl px-4 py-3 text-sm"
+                />
+              )}
             </div>
           </div>
 
@@ -168,24 +199,141 @@ function FicheEleveModal({ eleves, equipes, series, classeActive, classesInfo, i
 
           {idSelectionne && (
             <div>
-              <div className="text-xs text-piste-craie/50 mb-1.5">
-                Performances collectives sur ce cycle {performances.length > 0 ? `(${performances.length})` : ""}
+              <div className="flex items-center gap-1.5 text-xs text-piste-craie/50 mb-1.5">
+                <Timer size={13} /> Tests 200m individuels {hist200.length > 0 ? `(${hist200.length})` : ""}
+                <span className="text-piste-craie/30">— seul le meilleur compte pour la note</span>
+              </div>
+              {hist200.length === 0 ? (
+                <p className="text-xs text-piste-craie/30 border border-dashed border-white/10 rounded-lg px-3 py-2 mb-2">
+                  Aucun test 200m enregistré.
+                </p>
+              ) : (
+                <div className="space-y-1 mb-2">
+                  {[...hist200]
+                    .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0))
+                    .map((h) => {
+                      const estMeilleur = best200 && h.id === best200.id;
+                      const note = noteTemps200(eleveActuel, h.temps);
+                      return (
+                        <div
+                          key={h.id}
+                          className={`flex items-center justify-between text-xs rounded-lg px-3 py-1.5 border ${
+                            estMeilleur
+                              ? "border-piste-pelouse/40 bg-piste-pelouse/10"
+                              : h.archive
+                              ? "border-white/5 text-piste-craie/30"
+                              : "border-white/10 bg-piste-panneau"
+                          }`}
+                        >
+                          <span>
+                            {formatDateHeure(h.date)} · <span className="tabular font-semibold">{(h.temps / 1000).toFixed(1)} s</span>
+                            {note != null ? ` → ${note}/3` : ""}
+                            {h.source === "saisie" ? " · saisi" : ""}
+                            {estMeilleur && (
+                              <span className="ml-1.5 inline-flex items-center gap-0.5 text-piste-pelouse">
+                                <Star size={11} /> meilleur, compte pour la note
+                              </span>
+                            )}
+                            {h.archive && " · archivé"}
+                          </span>
+                          <span className="flex items-center gap-2">
+                            {h.archive && (
+                              <button
+                                onClick={() => onMajEleve(idSelectionne, (el) => reactiverPerf200(el, h.id))}
+                                className="text-piste-ambre"
+                              >
+                                Réactiver
+                              </button>
+                            )}
+                            <button
+                              onClick={() => {
+                                if (!confirm("Supprimer définitivement ce test 200m (erreur de saisie) ?")) return;
+                                onMajEleve(idSelectionne, (el) => supprimerPerf200(el, h.id));
+                              }}
+                              className="text-piste-craie/30 hover:text-piste-brique"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </span>
+                        </div>
+                      );
+                    })}
+                </div>
+              )}
+              <div className="flex gap-2">
+                <input
+                  value={nouveau200}
+                  onChange={(e) => setNouveau200(e.target.value)}
+                  placeholder="Ajouter un temps 200m (ex : 32.4)"
+                  className="flex-1 bg-piste-panneau border border-white/10 rounded-xl px-3 py-2 text-xs"
+                />
+                <button
+                  onClick={ajouterTemps200Fiche}
+                  disabled={typeof parseTempsSaisi(nouveau200) !== "number"}
+                  className="flex items-center gap-1 text-xs bg-piste-panneau border border-white/10 hover:border-piste-brique disabled:opacity-40 px-3 py-2 rounded-xl"
+                >
+                  <Plus size={13} /> Ajouter
+                </button>
+              </div>
+            </div>
+          )}
+
+          {idSelectionne && (
+            <div>
+              <div className="flex items-center gap-1.5 text-xs text-piste-craie/50 mb-1.5">
+                <Users size={13} /> Performances collectives sur le cycle {performances.length > 0 ? `(${performances.length})` : ""}
               </div>
               {performances.length === 0 ? (
                 <p className="text-xs text-piste-craie/30 border border-dashed border-white/10 rounded-lg px-3 py-2">
                   Aucune manche courue pour l'instant avec cet élève.
                 </p>
               ) : (
-                <div className="flex flex-wrap gap-1.5">
-                  {performances.map(({ serie, equipeId, equipe, temps }) => (
-                    <span
-                      key={serie.id}
-                      className="text-xs rounded-full px-2.5 py-1 border border-white/10 bg-piste-panneau text-piste-craie/70"
-                    >
-                      {equipe.nom}
-                      {equipe.adhoc ? " (jour)" : ""} · {serie.nom} · {formatChrono(temps)}
-                    </span>
-                  ))}
+                <div className="space-y-1.5">
+                  {[...performances].reverse().map(({ serie, equipeId, equipe, temps, date }) => {
+                    const retenue = serie.retenues?.[equipeId] !== false;
+                    const choisie = (perfGlobale?.serieChoisieIds || []).includes(serie.id);
+                    const d = detailNoteManche(eleveActuel, equipe, elevesById, temps);
+                    const scores = (serie.temoin?.[equipeId] || []).filter((v) => typeof v === "number");
+                    return (
+                      <div
+                        key={serie.id}
+                        className={`text-xs rounded-lg px-3 py-2 border ${
+                          choisie ? "border-piste-pelouse/40 bg-piste-pelouse/10" : "border-white/10 bg-piste-panneau"
+                        } ${retenue ? "" : "opacity-50"}`}
+                      >
+                        <div className="flex justify-between gap-2">
+                          <span className="font-semibold">
+                            {formatDateHeure(date)} · {serie.nom}
+                          </span>
+                          <span className="tabular font-semibold">{formatChrono(temps)}</span>
+                        </div>
+                        <div className="text-piste-craie/60">
+                          {equipe.nom}
+                          {equipe.adhoc ? " (jour)" : ""} ·{" "}
+                          {equipe.membreIds
+                            .map((id, i) => {
+                              const m = elevesById[id];
+                              const nom = m ? `${m.prenom} ${m.nom}` : "élève retiré";
+                              return `${i + 1}. ${id === idSelectionne ? nom.toUpperCase() : nom}`;
+                            })
+                            .join(" → ")}
+                        </div>
+                        <div className="text-piste-craie/50">
+                          {d
+                            ? `Relais ${d.noteRelais}/3 · IT ${d.itSecondes >= 0 ? "+" : ""}${d.itSecondes}s ${d.noteIT}/3 · 200m ${d.note200}/3 → perf. ${d.performance}/3`
+                            : "Note non calculable (temps 200m manquant pour un·e coureur·se)"}
+                          {scores.length > 0 ? ` · témoin ${scores.join("/")}` : ""}
+                        </div>
+                        {(choisie || !retenue) && (
+                          <div className={choisie ? "text-piste-pelouse" : "text-piste-craie/40"}>
+                            {choisie
+                              ? `★ Manche utilisée pour la note (${libelleModeNoteRelais(modeNoteRelais)})`
+                              : "Écartée du calcul de la note (onglet Résultats)"}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -351,7 +499,7 @@ function FicheEleveModal({ eleves, equipes, series, classeActive, classesInfo, i
   );
 }
 
-export default function TabEleves({ eleves, setEleves, equipes, series, classeActive, classesInfo, onDeplacerEleve }) {
+export default function TabEleves({ eleves, elevesById, modeNoteRelais, setEleves, equipes, series, classeActive, classesInfo, onDeplacerEleve }) {
   const [importOuvert, setImportOuvert] = useState(false);
   const [ficheOuverte, setFicheOuverte] = useState(false);
   const [idFiche, setIdFiche] = useState("");
@@ -372,11 +520,23 @@ export default function TabEleves({ eleves, setEleves, equipes, series, classeAc
     setImportOuvert(false);
   }
 
-  function ajouterEleve(donnees) {
-    setEleves((prev) => [
-      ...prev,
-      { id: uid(), classe: classeActive, ...donnees },
-    ]);
+  function ajouterEleve(donnees, temps200) {
+    const base = { id: uid(), classe: classeActive, ...donnees, temps200: null, historique200: [] };
+    const eleve = typeof temps200 === "number" ? ajouterPerf200(base, temps200, "saisie") : base;
+    setEleves((prev) => [...prev, eleve]);
+  }
+
+  // Mise à jour d'un élève par une fonction (historique 200m...), sans risque d'écraser
+  // une modification concurrente.
+  function majEleve(id, fn) {
+    setEleves((prev) => prev.map((el) => (el.id === id ? fn(el) : el)));
+  }
+
+  // Saisie rapide d'un temps dans le tableau : AJOUTÉ à l'historique (jamais écrasé).
+  function ajouterTempsTableau(id, valeurSaisie) {
+    const t = parseTempsSaisi(valeurSaisie);
+    if (typeof t !== "number") return;
+    majEleve(id, (el) => (t === el.temps200 ? el : ajouterPerf200(el, t, "saisie")));
   }
 
   function modifier(id, champ, valeur) {
@@ -392,8 +552,13 @@ export default function TabEleves({ eleves, setEleves, equipes, series, classeAc
   }
 
   function reinitialiserPerformances() {
-    if (!confirm(`Effacer le temps au 200m de tous les élèves de la classe ${classeActive} ? Cette action est irréversible.`)) return;
-    setEleves((prev) => prev.map((e) => (e.classe === classeActive ? { ...e, temps200: null } : e)));
+    if (
+      !confirm(
+        `Repartir de zéro pour le 200m de la classe ${classeActive} ?\n\nLes tests déjà enregistrés sont ARCHIVÉS : ils restent consultables (et réactivables) dans la fiche de chaque élève, mais ne comptent plus pour la note ni pour le classement.`
+      )
+    )
+      return;
+    setEleves((prev) => prev.map((e) => (e.classe === classeActive ? archiverPerf200(e) : e)));
   }
 
   function ouvrirFiche(id) {
@@ -430,7 +595,7 @@ export default function TabEleves({ eleves, setEleves, equipes, series, classeAc
             title={`Effacer les temps au 200m de la classe ${classeActive}`}
             className="flex items-center gap-1.5 text-xs text-piste-craie/50 hover:text-piste-brique border border-white/10 hover:border-piste-brique px-2.5 py-1 rounded-full"
           >
-            <RotateCcw size={12} /> Réinitialiser les temps de la classe
+            <RotateCcw size={12} /> Nouveau départ 200m (archiver les tests)
           </button>
         </div>
       )}
@@ -449,7 +614,7 @@ export default function TabEleves({ eleves, setEleves, equipes, series, classeAc
                 <th className="text-left px-3 py-2">Prénom</th>
                 <th className="text-left px-3 py-2">Classe</th>
                 <th className="text-left px-3 py-2">Sexe</th>
-                <th className="text-left px-3 py-2">Temps 200m</th>
+                <th className="text-left px-3 py-2">Meilleur 200m</th>
                 <th></th>
               </tr>
             </thead>
@@ -499,10 +664,11 @@ export default function TabEleves({ eleves, setEleves, equipes, series, classeAc
                   </td>
                   <td className="px-3 py-1.5">
                     <input
-                      key={e.temps200}
+                      key={e.id + "-" + historique200(e).length + "-" + e.temps200}
                       placeholder="ex : 32.4"
+                      title="Meilleur temps (compte pour la note). Taper un nouveau temps l'AJOUTE à l'historique de l'élève (fiche)."
                       defaultValue={e.temps200 != null ? (e.temps200 / 1000).toFixed(1) : ""}
-                      onBlur={(ev) => modifier(e.id, "temps200", parseTempsSaisi(ev.target.value))}
+                      onBlur={(ev) => ajouterTempsTableau(e.id, ev.target.value)}
                       className="bg-transparent w-20 tabular focus:outline-none placeholder:text-piste-craie/20"
                     />
                     <span className="text-piste-craie/30 ml-1">s</span>
@@ -531,6 +697,9 @@ export default function TabEleves({ eleves, setEleves, equipes, series, classeAc
       {ficheOuverte && (
         <FicheEleveModal
           eleves={eleves}
+          elevesById={elevesById}
+          modeNoteRelais={modeNoteRelais}
+          onMajEleve={majEleve}
           equipes={equipes}
           series={series}
           classeActive={classeActive}

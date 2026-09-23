@@ -9,9 +9,12 @@ import {
   noteGenerale20,
   OPTIONS_POSITIONNEMENT,
   OPTIONS_AFLP2,
+  MODES_NOTE_RELAIS,
+  libelleModeNoteRelais,
 } from "../utils/bareme12";
+import { formatDateCourte } from "../utils/historique";
 
-export default function TabResultats({ equipes, elevesById, series, setSeries, eleves, setEleves }) {
+export default function TabResultats({ equipes, elevesById, series, setSeries, eleves, setEleves, modeNoteRelais = "meilleure", setModeNoteRelais }) {
   function modifier(id, champ, valeur) {
     setEleves((prev) => prev.map((e) => (e.id === id ? { ...e, [champ]: valeur === "" ? null : Number(valeur) } : e)));
   }
@@ -42,9 +45,32 @@ export default function TabResultats({ equipes, elevesById, series, setSeries, e
         individuels sont ramenés à un équivalent binôme par une règle de trois (× 2/3) avant d'être comparés au
         même barème. Chaque élève peut être chronométré·e autant de fois que nécessaire sur l'ensemble du cycle,
         avec son équipe habituelle ou une équipe du jour (en cas d'absence d'un·e partenaire) : toutes ses
-        performances sont conservées dans son suivi personnel ci-dessous, où tu peux décocher celles à exclure du
-        calcul de la note.
+        performances sont conservées, datées, avec la composition réelle de l'équipe, dans son suivi personnel
+        ci-dessous, où tu peux décocher celles à exclure du calcul de la note. Le 200m individuel retenu est
+        toujours le meilleur temps de l'élève.
       </p>
+
+      <div className="flex flex-wrap items-center gap-2 mb-5 bg-piste-panneau rounded-lg border border-white/10 px-4 py-3">
+        <span className="text-xs text-piste-craie/60">Note de relais (évaluation finale) calculée sur :</span>
+        {MODES_NOTE_RELAIS.map((m) => (
+          <button
+            key={m.valeur}
+            onClick={() => setModeNoteRelais && setModeNoteRelais(m.valeur)}
+            className={`text-xs px-3 py-1.5 rounded-full border ${
+              modeNoteRelais === m.valeur
+                ? "border-piste-brique bg-piste-brique text-white font-semibold"
+                : "border-white/15 text-piste-craie/70 hover:border-piste-brique"
+            }`}
+          >
+            {m.libelle}
+          </button>
+        ))}
+        <span className="text-[11px] text-piste-craie/40 w-full">
+          Parmi les manches cochées de chaque élève (si une seule manche, elle compte seule). La note de relais
+          porte sur la moyenne des 2 manches choisies, l'indice de transmission sur la meilleure des deux. Les
+          manches utilisées sont repérées par ★ ci-dessous. Le 200m individuel : meilleur temps du cycle.
+        </span>
+      </div>
 
       {equipesTriees.length === 0 ? (
         <div className="text-piste-craie/50 text-sm border border-dashed border-white/10 rounded-lg p-8 text-center">
@@ -61,7 +87,7 @@ export default function TabResultats({ equipes, elevesById, series, setSeries, e
                   {eq.membreIds.map((id) => {
                     const el = elevesById[id];
                     if (!el) return null;
-                    const perf = calculerPerformanceEleve(el, elevesById, equipes, series);
+                    const perf = calculerPerformanceEleve(el, elevesById, equipes, series, modeNoteRelais);
                     const total12 = noteFinSequence12(el, perf);
                     const total8 = noteFilSequence8(el);
                     const total20 = noteGenerale20(el, perf);
@@ -92,10 +118,15 @@ export default function TabResultats({ equipes, elevesById, series, setSeries, e
                               Suivi personnel sur le cycle ({listeManches.length})
                             </div>
                             <div className="flex flex-wrap gap-1.5">
-                              {listeManches.map(({ serie, equipeId, equipe }) => {
+                              {listeManches.map(({ serie, equipeId, equipe, date }) => {
                                 const retenue = serie.retenues?.[equipeId] !== false;
                                 const arriveeMs = serie.arrivals[equipeId];
                                 const p = performanceDepuisTempsRelais(el, equipe, elevesById, arriveeMs);
+                                const choisie = (perf?.serieChoisieIds || []).includes(serie.id);
+                                const coequipiers = equipe.membreIds
+                                  .filter((mid) => mid !== el.id)
+                                  .map((mid) => elevesById[mid]?.prenom || "?")
+                                  .join(", ");
                                 return (
                                   <label
                                     key={serie.id}
@@ -112,8 +143,9 @@ export default function TabResultats({ equipes, elevesById, series, setSeries, e
                                       onChange={() => toggleRetenue(serie.id, equipeId)}
                                       className="accent-piste-pelouse"
                                     />
-                                    {serie.nom}
-                                    {equipe.adhoc ? " (jour)" : ""} · {formatChrono(arriveeMs)}
+                                    {choisie ? "★ " : ""}
+                                    {formatDateCourte(date)} · {serie.nom}
+                                    {equipe.adhoc ? " (jour)" : ""} · avec {coequipiers} · {formatChrono(arriveeMs)}
                                     {p != null ? ` → ${p}/3` : ""}
                                   </label>
                                 );
@@ -127,8 +159,8 @@ export default function TabResultats({ equipes, elevesById, series, setSeries, e
                             <>
                               Performance{perf.aUneEquipeDuJour ? " (dont au moins une manche en équipe du jour)" : ""} :{" "}
                               <span className="text-piste-craie/80">
-                                200m {perf.note200}/3 · relais (moy. {formatChrono(perf.moyenneRelaisMs)}, {perf.nbManches}{" "}
-                                manche{perf.nbManches > 1 ? "s" : ""}) {perf.noteRelais}/3 · IT {perf.itSecondes >= 0 ? "+" : ""}
+                                200m (meilleur) {perf.note200}/3 · relais ({perf.nbManchesChoisies > 1 ? libelleModeNoteRelais(perf.mode) : "1 seule manche"}{" "}
+                                sur {perf.nbManches} : {formatChrono(perf.relaisChoisiMs)}) {perf.noteRelais}/3 · IT {perf.itSecondes >= 0 ? "+" : ""}
                                 {perf.itSecondes}s {perf.noteIT}/3
                               </span>{" "}
                               → moyenne {perf.performance}/3
