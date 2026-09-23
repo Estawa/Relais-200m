@@ -1,3 +1,4 @@
+import { compositionManche, dateManche } from "./historique";
 // Barème officiel "Relais Long 2x200m" — Bac Pro Terminale, Académie de Versailles,
 // session 2021. Situation d'évaluation fin de séquence / 12 pts :
 //   AFLP 1 (7 pts) = Positionnement (4 pts, saisi par l'enseignant) + Performance (3 pts, calculée)
@@ -133,21 +134,44 @@ export function performanceDepuisTempsRelais(eleve, equipe, elevesById, arriveeM
 // chaque manche, l'équipe réellement utilisée ce jour-là (et donc ses coéquipiers et la
 // taille binôme/trinôme) sert à ramener le temps à un équivalent binôme, avant d'agréger
 // l'ensemble comme le fait calculerPerformance pour une équipe unique.
-export function calculerPerformanceEleve(eleve, elevesById, equipes, series) {
+// `mode` (choisi par classe dans l'onglet Résultats, v2.6.0) :
+//   "meilleure" -> moyenne des 2 MEILLEURES performances de relais du cycle
+//   "derniere"  -> moyenne des 2 DERNIÈRES performances de relais du cycle (les plus récentes)
+// (parmi les manches retenues/cochées ; s'il n'y en a qu'une, elle est utilisée seule).
+// Note de relais = barème appliqué à la moyenne des 2 manches choisies ; indice de
+// transmission = somme des 200m individuels - la meilleure de ces 2 manches (comme dans le
+// référentiel officiel). Le 200m individuel utilise toujours le MEILLEUR temps de l'élève.
+// (Les valeurs "meilleure"/"derniere" sont gardées telles quelles pour rester compatibles
+// avec le réglage déjà enregistré en v2.6.0.)
+export const MODES_NOTE_RELAIS = [
+  { valeur: "meilleure", libelle: "Moyenne des 2 meilleures", court: "moy. des 2 meilleures" },
+  { valeur: "derniere", libelle: "Moyenne des 2 dernières", court: "moy. des 2 dernières" },
+];
+
+export function libelleModeNoteRelais(mode) {
+  return (MODES_NOTE_RELAIS.find((m) => m.valeur === mode) || MODES_NOTE_RELAIS[0]).court;
+}
+
+export function calculerPerformanceEleve(eleve, elevesById, equipes, series, mode = "meilleure") {
   if (typeof eleve.temps200 !== "number") return null;
 
   const points = [];
   series.forEach((s) => {
-    const teamId = (s.equipeIds || []).find((id) => {
-      const t = equipes.find((e) => e.id === id);
-      return t && t.membreIds.includes(eleve.id);
-    });
-    if (!teamId) return;
+    // Composition figée au moment de la manche (v2.6.0) : indépendante des équipes actuelles.
+    let team = null;
+    for (const id of s.equipeIds || []) {
+      const c = compositionManche(s, id, equipes);
+      if (c && c.membreIds.includes(eleve.id)) {
+        team = c;
+        break;
+      }
+    }
+    if (!team) return;
+    const teamId = team.id;
     if (s.retenues?.[teamId] === false) return;
     const arriveeMs = s.arrivals?.[teamId];
     if (typeof arriveeMs !== "number") return;
-    const team = equipes.find((e) => e.id === teamId);
-    if (!team || (team.membreIds.length !== 2 && team.membreIds.length !== 3)) return;
+    if (team.membreIds.length !== 2 && team.membreIds.length !== 3) return;
     const coequipiers = team.membreIds.filter((id) => id !== eleve.id).map((id) => elevesById[id]);
     if (coequipiers.some((c) => !c || typeof c.temps200 !== "number")) return;
     const nb = team.membreIds.length;
@@ -155,6 +179,7 @@ export function calculerPerformanceEleve(eleve, elevesById, equipes, series) {
     const sommeIndivBrute = eleve.temps200 + coequipiers.reduce((a, c) => a + c.temps200, 0);
     points.push({
       serieId: s.id,
+      date: dateManche(s),
       equipeId: teamId,
       equipeNom: team.nom,
       adhoc: !!team.adhoc,
@@ -166,15 +191,22 @@ export function calculerPerformanceEleve(eleve, elevesById, equipes, series) {
 
   if (points.length === 0) return null;
 
-  const moyenneRelaisMs = points.reduce((a, p) => a + p.relaisEquivMs, 0) / points.length;
   const meilleur = points.reduce((a, p) => (p.relaisEquivMs < a.relaisEquivMs ? p : a));
+  const choisies =
+    mode === "derniere"
+      ? [...points].sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0)).slice(0, 2)
+      : [...points].sort((a, b) => a.relaisEquivMs - b.relaisEquivMs).slice(0, 2);
+  const moyenneEquivMs = choisies.reduce((a, p) => a + p.relaisEquivMs, 0) / choisies.length;
+  const moyenneBruteMs = choisies.reduce((a, p) => a + p.arriveeMs, 0) / choisies.length;
+  // IT : calculé sur la meilleure des manches choisies (référentiel : "la meilleure des 2")
+  const meilleureChoisie = choisies.reduce((a, p) => (p.relaisEquivMs < a.relaisEquivMs ? p : a));
 
   const bareme200 = eleve.sexe === "F" ? BAREME_200M_FILLES : BAREME_200M_GARCONS;
   const baremeRelais = eleve.sexe === "F" ? BAREME_RELAIS_FILLES : BAREME_RELAIS_GARCONS;
 
   const note200 = chercherPoints(eleve.temps200 / 1000, bareme200);
-  const noteRelais = chercherPoints(moyenneRelaisMs / 1000, baremeRelais);
-  const noteIT = chercherPoints(meilleur.itSecondes, BAREME_IT);
+  const noteRelais = chercherPoints(moyenneEquivMs / 1000, baremeRelais);
+  const noteIT = chercherPoints(meilleureChoisie.itSecondes, BAREME_IT);
 
   const performance = (note200 + noteRelais + noteIT) / 3;
 
@@ -184,11 +216,48 @@ export function calculerPerformanceEleve(eleve, elevesById, equipes, series) {
     noteIT,
     performance: Math.round(performance * 100) / 100,
     nbManches: points.length,
-    moyenneRelaisMs,
+    nbManchesChoisies: choisies.length,
+    mode,
+    serieChoisieIds: choisies.map((p) => p.serieId),
+    relaisChoisiMs: moyenneBruteMs,
+    relaisChoisiEquivMs: moyenneEquivMs,
     meilleurRelaisMs: meilleur.relaisEquivMs,
-    itSecondes: Math.round(meilleur.itSecondes * 100) / 100,
+    itSecondes: Math.round(meilleureChoisie.itSecondes * 100) / 100,
     aUneEquipeDuJour: points.some((p) => p.adhoc),
     manches: points,
+  };
+}
+
+// Note /3 (barème 200m individuel) d'un temps donné, selon le sexe de l'élève.
+export function noteTemps200(eleve, tempsMs) {
+  if (typeof tempsMs !== "number") return null;
+  const bareme200 = eleve?.sexe === "F" ? BAREME_200M_FILLES : BAREME_200M_GARCONS;
+  return chercherPoints(tempsMs / 1000, bareme200);
+}
+
+// Détail des notes d'UNE manche pour un·e élève (relais, IT, 200m retenu, moyenne /3).
+// Renvoie null si le calcul n'est pas possible (temps 200m manquant...).
+export function detailNoteManche(eleve, equipe, elevesById, arriveeMs) {
+  if (!equipe || (equipe.membreIds.length !== 2 && equipe.membreIds.length !== 3)) return null;
+  if (typeof arriveeMs !== "number" || typeof eleve?.temps200 !== "number") return null;
+  const coequipiers = equipe.membreIds.filter((id) => id !== eleve.id).map((id) => elevesById[id]);
+  if (coequipiers.some((c) => !c || typeof c.temps200 !== "number")) return null;
+  const nb = equipe.membreIds.length;
+  const ratio = 2 / nb;
+  const sommeIndivBrute = eleve.temps200 + coequipiers.reduce((a, c) => a + c.temps200, 0);
+  const relaisMs = arriveeMs * ratio;
+  const itSecondes = ((sommeIndivBrute - arriveeMs) * ratio) / 1000;
+  const bareme200 = eleve.sexe === "F" ? BAREME_200M_FILLES : BAREME_200M_GARCONS;
+  const baremeRelais = eleve.sexe === "F" ? BAREME_RELAIS_FILLES : BAREME_RELAIS_GARCONS;
+  const note200 = chercherPoints(eleve.temps200 / 1000, bareme200);
+  const noteRelais = chercherPoints(relaisMs / 1000, baremeRelais);
+  const noteIT = chercherPoints(itSecondes, BAREME_IT);
+  return {
+    note200,
+    noteRelais,
+    noteIT,
+    itSecondes: Math.round(itSecondes * 100) / 100,
+    performance: Math.round(((note200 + noteRelais + noteIT) / 3) * 100) / 100,
   };
 }
 

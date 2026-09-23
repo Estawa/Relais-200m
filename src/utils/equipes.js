@@ -1,4 +1,5 @@
 import { uid } from "./storage";
+import { compositionManche, dateManche } from "./historique";
 
 // Détermine la classe "propriétaire" d'une équipe : celle indiquée explicitement,
 // ou à défaut la classe majoritaire parmi ses membres (compatibilité des équipes
@@ -61,17 +62,16 @@ export function tempsEquipe(equipe, elevesById) {
 export function manchesEleve(eleveId, equipes, series) {
   return (series || [])
     .map((s) => {
-      const equipeId = (s.equipeIds || []).find((id) => {
-        const t = equipes.find((e) => e.id === id);
-        return t && t.membreIds.includes(eleveId);
-      });
-      if (!equipeId || typeof s.arrivals?.[equipeId] !== "number") return null;
-      const equipe = equipes.find((e) => e.id === equipeId);
-      if (!equipe) return null;
-      return { serie: s, equipeId, equipe, temps: s.arrivals[equipeId] };
+      for (const equipeId of s.equipeIds || []) {
+        const compo = compositionManche(s, equipeId, equipes);
+        if (!compo || !compo.membreIds.includes(eleveId)) continue;
+        if (typeof s.arrivals?.[equipeId] !== "number") return null;
+        return { serie: s, equipeId, equipe: compo, temps: s.arrivals[equipeId], date: dateManche(s) };
+      }
+      return null;
     })
     .filter(Boolean)
-    .sort((a, b) => new Date(a.serie.creeLe) - new Date(b.serie.creeLe));
+    .sort((a, b) => new Date(a.date || 0) - new Date(b.date || 0));
 }
 
 // Fait tourner l'ordre des coureurs d'une équipe (qui part, qui relaye, qui
