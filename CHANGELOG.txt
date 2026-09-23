@@ -1,6 +1,61 @@
 CHANGELOG — Relais 200m by C. Guilhem
 =====================================
 
+v2.7.0
+-----
+- Note de relais de l'évaluation finale (onglet Résultats, choix par classe) : au lieu de
+  "meilleure / dernière performance", le choix porte désormais sur :
+    * "Moyenne des 2 meilleures" performances du cycle (par défaut)
+    * "Moyenne des 2 dernières" performances du cycle (les plus récentes en date)
+  parmi les manches cochées de l'élève. S'il n'y a qu'une seule manche, elle compte seule.
+- La note de relais /3 est calculée sur la moyenne des 2 manches choisies ; l'indice de
+  transmission sur la meilleure de ces 2 manches (comme dans le référentiel officiel).
+- Les 2 manches utilisées sont marquées d'une étoile dans Résultats et dans la fiche élève.
+- Note individuelle 200m : inchangée, meilleur temps du cycle.
+- Récap imprimable : colonne "Relais (moy.)" = moyenne des 2 manches retenues, mode rappelé
+  en en-tête.
+- Réglage déjà choisi en v2.6.0 conservé : "meilleure" devient "moyenne des 2 meilleures",
+  "dernière" devient "moyenne des 2 dernières".
+
+v2.6.0
+-----
+Objectif : ne plus jamais écraser ni perdre une performance, et pouvoir tout revoir.
+
+TEST 200m INDIVIDUEL
+- Chaque test (chronométré en salve ou saisi à la main) est désormais AJOUTÉ à un
+  historique daté propre à l'élève, au lieu d'écraser le temps précédent.
+- Note individuelle : SEUL LE MEILLEUR temps compte. Le temps affiché dans le tableau,
+  utilisé pour le classement, les équipes et la note /3, est toujours le meilleur temps.
+- Fiche élève : liste de tous les tests (date + heure, temps, note /3 correspondante,
+  repère du meilleur), ajout d'un temps, suppression d'une erreur de saisie.
+- Le bouton "Réinitialiser les temps de la classe" devient "Nouveau départ 200m" : les
+  tests sont ARCHIVÉS (toujours visibles et réactivables dans la fiche), plus effacés.
+- Les temps enregistrés avant la v2.6.0 sont repris en "date inconnue".
+
+MANCHES DE RELAIS
+- Chaque manche mémorise maintenant une photo figée de chaque équipe (nom + coureurs
+  dans l'ordre de passage) et sa date/heure de départ.
+- Le lien élève <-> performance ne dépend plus des équipes actuelles : reconstruire les
+  équipes, modifier un binôme/trinôme ou supprimer une équipe du jour ne fait plus
+  disparaître les anciennes performances (bug des versions précédentes).
+- Les anciennes manches sont récupérées automatiquement grâce à l'ordre des coureurs
+  qu'elles contenaient déjà (y compris celles devenues "orphelines").
+- Onglet Évaluation : historique de toutes les manches, datées, dépliables (composition,
+  couloir, temps, notes de témoin).
+- Fiche élève : chaque performance collective avec date, manche, équipe, coéquipiers dans
+  l'ordre de passage, temps, et notes correspondantes (relais /3, IT /3, 200m /3,
+  performance /3).
+
+NOTE DE L'ÉVALUATION FINALE
+- Onglet Résultats : choix, par classe, de la performance de relais utilisée pour la
+  note : "Meilleure performance" (par défaut) ou "Dernière performance", parmi les
+  manches cochées. La manche choisie sert pour la note de relais ET pour l'indice de
+  transmission ; elle est repérée par une étoile. (Remplace l'ancienne moyenne des
+  manches.)
+- Récap imprimable : indique le mode utilisé, le temps de relais retenu, et ajoute
+  l'historique complet des manches et des tests 200m (noir et blanc, sans ligne coupée
+  entre deux pages).
+
 v2.5.0
 -----
 - Nouveau "Journal de suivi" dans la fiche élève (onglet Élèves, icône fiche) : une entrée
