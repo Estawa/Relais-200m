@@ -1,6 +1,18 @@
 CHANGELOG — Relais 200m by C. Guilhem
 =====================================
 
+v2.8.0
+-----
+- Correction manuelle d'un temps de manche après la course : dans l'onglet Évaluation,
+  "Historique des manches", dépliez une manche puis touchez le crayon à côté du temps d'une
+  équipe. Tapez le bon temps (ex. 58,4 ou 1:02,3) et validez (coche ou touche Entrée).
+- Fonctionne aussi pour une équipe dont l'arrivée n'avait pas été pointée.
+- Le chrono d'origine n'est jamais perdu : il reste affiché ("corrigé, chrono initial ...")
+  et un lien "rétablir" permet de revenir au temps d'origine.
+- Toutes les notes se recalculent automatiquement avec le temps corrigé (Résultats, fiche
+  élève, Récap). Le temps corrigé est signalé dans Résultats, dans la fiche élève et sur
+  le Récap imprimable.
+
 v2.7.0
 -----
 - Note de relais de l'évaluation finale (onglet Résultats, choix par classe) : au lieu de
