@@ -1,4 +1,5 @@
 import { uid } from "./storage";
+import { formatChrono } from "./temps";
 
 // =====================================================================================
 // HISTORIQUE DES PERFORMANCES (v2.6.0)
@@ -134,6 +135,50 @@ export function completerCompositions(series, equipes) {
     return { ...s, compositions };
   });
   return change ? res : series;
+}
+
+// ---------- Correction manuelle d'un temps de manche (v2.8.0) ----------
+// Après la course, un temps mal pointé peut être remplacé par un temps tapé à la main.
+// Le chrono d'origine n'est jamais perdu : il est gardé dans `serie.corrections[equipeId]`
+// = { origine: ms ou null (aucun pointage), le: date ISO de la correction }.
+// `serie.arrivals[equipeId]` contient le temps corrigé : toutes les notes (Résultats,
+// fiche élève, Récap) se recalculent donc automatiquement.
+
+export function correctionManche(serie, equipeId) {
+  return serie?.corrections?.[equipeId] || null;
+}
+
+export function corrigerTempsManche(serie, equipeId, tempsMs) {
+  const corrections = { ...(serie.corrections || {}) };
+  const deja = corrections[equipeId];
+  const actuel = serie.arrivals?.[equipeId];
+  const origine = deja ? deja.origine : typeof actuel === "number" ? actuel : null;
+  if (origine != null && Math.round(origine) === Math.round(tempsMs)) {
+    delete corrections[equipeId]; // on revient exactement au chrono d'origine
+  } else {
+    corrections[equipeId] = { origine, le: new Date().toISOString() };
+  }
+  return { ...serie, arrivals: { ...(serie.arrivals || {}), [equipeId]: tempsMs }, corrections };
+}
+
+export function retablirTempsManche(serie, equipeId) {
+  const c = serie?.corrections?.[equipeId];
+  if (!c) return serie;
+  const arrivals = { ...(serie.arrivals || {}) };
+  if (typeof c.origine === "number") arrivals[equipeId] = c.origine;
+  else delete arrivals[equipeId];
+  const corrections = { ...serie.corrections };
+  delete corrections[equipeId];
+  return { ...serie, arrivals, corrections };
+}
+
+// Texte court à afficher à côté d'un temps corrigé (null si pas de correction).
+export function libelleCorrection(serie, equipeId) {
+  const c = correctionManche(serie, equipeId);
+  if (!c) return null;
+  return typeof c.origine === "number"
+    ? `corrigé, chrono initial ${formatChrono(c.origine)}`
+    : "saisi à la main, pas de chrono initial";
 }
 
 // ---------- Formatage des dates ----------
