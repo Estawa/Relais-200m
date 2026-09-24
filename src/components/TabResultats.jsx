@@ -12,7 +12,7 @@ import {
   MODES_NOTE_RELAIS,
   libelleModeNoteRelais,
 } from "../utils/bareme12";
-import { formatDateCourte } from "../utils/historique";
+import { formatDateCourte, correctionManche } from "../utils/historique";
 
 export default function TabResultats({ equipes, elevesById, series, setSeries, eleves, setEleves, modeNoteRelais = "meilleure", setModeNoteRelais }) {
   function modifier(id, champ, valeur) {
@@ -146,6 +146,7 @@ export default function TabResultats({ equipes, elevesById, series, setSeries, e
                                     {choisie ? "★ " : ""}
                                     {formatDateCourte(date)} · {serie.nom}
                                     {equipe.adhoc ? " (jour)" : ""} · avec {coequipiers} · {formatChrono(arriveeMs)}
+                                    {correctionManche(serie, equipeId) ? " (corrigé)" : ""}
                                     {p != null ? ` → ${p}/3` : ""}
                                   </label>
                                 );

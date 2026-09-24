@@ -11,6 +11,7 @@ import {
   archiverPerf200,
   reactiverPerf200,
   formatDateHeure,
+  libelleCorrection,
 } from "../utils/historique";
 import { noteTemps200, detailNoteManche, calculerPerformanceEleve, libelleModeNoteRelais } from "../utils/bareme12";
 import TestSerie from "./TestSerie";
@@ -307,6 +308,9 @@ function FicheEleveModal({ eleves, elevesById, modeNoteRelais, onMajEleve, equip
                           </span>
                           <span className="tabular font-semibold">{formatChrono(temps)}</span>
                         </div>
+                        {libelleCorrection(serie, equipeId) && (
+                          <div className="text-piste-ambre">Temps {libelleCorrection(serie, equipeId)}</div>
+                        )}
                         <div className="text-piste-craie/60">
                           {equipe.nom}
                           {equipe.adhoc ? " (jour)" : ""} ·{" "}

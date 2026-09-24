@@ -1,7 +1,7 @@
 import React from "react";
 import { Printer } from "lucide-react";
 import { formatChrono } from "../utils/temps";
-import { compositionManche, dateManche, formatDateHeure, historique200, meilleurePerf200 } from "../utils/historique";
+import { compositionManche, dateManche, formatDateHeure, historique200, meilleurePerf200, libelleCorrection } from "../utils/historique";
 import {
   detailNoteManche,
   noteTemps200,
@@ -181,7 +181,12 @@ export default function RecapTab({ eleves, elevesById, equipes, series, classeAc
                             })
                             .join(" → ")}
                         </td>
-                        <td className="text-center px-1.5 py-1 tabular">{formatChrono(t)}</td>
+                        <td className="text-center px-1.5 py-1 tabular">
+                          {formatChrono(t)}
+                          {libelleCorrection(s, eqId) && (
+                            <div className="text-[10px] italic whitespace-nowrap">({libelleCorrection(s, eqId)})</div>
+                          )}
+                        </td>
                         <td className="text-center px-1.5 py-1">{s.retenues?.[eqId] === false ? "non" : "oui"}</td>
                       </tr>
                     );

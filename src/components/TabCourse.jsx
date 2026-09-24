@@ -1,15 +1,25 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Play, Flag, Square, Trash2, ChevronDown, ChevronUp } from "lucide-react";
-import { formatChrono } from "../utils/temps";
+import { Play, Flag, Square, Trash2, ChevronDown, ChevronUp, Pencil, Check, X, RotateCcw } from "lucide-react";
+import { formatChrono, parseTempsSaisi } from "../utils/temps";
 import { uid } from "../utils/storage";
 import { ordreCoureursPourManche } from "../utils/equipes";
-import { photoEquipe, compositionManche, dateManche, formatDateHeure } from "../utils/historique";
+import {
+  photoEquipe,
+  compositionManche,
+  dateManche,
+  formatDateHeure,
+  corrigerTempsManche,
+  retablirTempsManche,
+  libelleCorrection,
+} from "../utils/historique";
 
 export default function TabCourse({ equipes, elevesById, series, setSeries }) {
   const [selection, setSelection] = useState([]);
   const [couloirs, setCouloirs] = useState({});
   const [serieActiveId, setSerieActiveId] = useState(null);
   const [serieDepliee, setSerieDepliee] = useState(null);
+  // Correction manuelle d'un temps dans l'historique : { serieId, eqId, valeur, erreur }
+  const [edition, setEdition] = useState(null);
   const [enCours, setEnCours] = useState(false);
   const [maintenant, setMaintenant] = useState(Date.now());
   const startRef = useRef(null);
@@ -146,6 +156,35 @@ export default function TabCourse({ equipes, elevesById, series, setSeries }) {
   function supprimerSerie(id) {
     if (!confirm("Supprimer DÉFINITIVEMENT cette manche et ses temps enregistrés ? Elle disparaîtra de l'historique de tous les élèves concernés.")) return;
     setSeries((prev) => prev.filter((s) => s.id !== id));
+  }
+
+  function ouvrirEdition(serie, eqId) {
+    const t = serie.arrivals?.[eqId];
+    setEdition({
+      serieId: serie.id,
+      eqId,
+      valeur: typeof t === "number" ? formatChrono(t).replace(".", ",") : "",
+      erreur: "",
+    });
+  }
+
+  function validerEdition() {
+    if (!edition) return;
+    const ms = parseTempsSaisi(edition.valeur);
+    if (ms == null || ms <= 0 || ms >= 10 * 60 * 1000) {
+      setEdition({ ...edition, erreur: "Temps non valide. Exemples : 58,4 ou 1:02,3" });
+      return;
+    }
+    const tempsMs = Math.round(ms);
+    setSeries((prev) =>
+      prev.map((s) => (s.id === edition.serieId ? corrigerTempsManche(s, edition.eqId, tempsMs) : s))
+    );
+    setEdition(null);
+  }
+
+  function retablir(serieId, eqId) {
+    if (!confirm("Remettre le chrono d'origine pour cette équipe ?")) return;
+    setSeries((prev) => prev.map((s) => (s.id === serieId ? retablirTempsManche(s, eqId) : s)));
   }
 
   const chronoMs = enCours ? maintenant - startRef.current : 0;
@@ -346,13 +385,59 @@ export default function TabCourse({ equipes, elevesById, series, setSeries }) {
                             const scores = (s.temoin?.[eqId] || []).filter((v) => typeof v === "number");
                             return (
                               <div key={eqId} className="text-xs border-t border-white/5 pt-1.5">
-                                <div className="flex justify-between">
+                                <div className="flex justify-between items-center gap-2">
                                   <span className="font-semibold">
                                     Couloir {s.couloirs?.[eqId] ?? "?"} · {c.nom}
                                     {c.adhoc ? " (jour)" : ""}
                                   </span>
-                                  <span className="tabular text-piste-pelouse">{typeof t === "number" ? formatChrono(t) : "—"}</span>
+                                  {edition && edition.serieId === s.id && edition.eqId === eqId ? (
+                                    <span className="flex items-center gap-1">
+                                      <input
+                                        autoFocus
+                                        inputMode="decimal"
+                                        value={edition.valeur}
+                                        onChange={(ev) => setEdition({ ...edition, valeur: ev.target.value, erreur: "" })}
+                                        onKeyDown={(ev) => {
+                                          if (ev.key === "Enter") validerEdition();
+                                          if (ev.key === "Escape") setEdition(null);
+                                        }}
+                                        placeholder="ex. 58,4"
+                                        className="bg-piste-nuit/60 rounded px-2 py-1 w-20 tabular focus:outline-none"
+                                      />
+                                      <button onClick={validerEdition} title="Valider" className="text-piste-pelouse p-1">
+                                        <Check size={15} />
+                                      </button>
+                                      <button onClick={() => setEdition(null)} title="Annuler" className="text-piste-craie/40 p-1">
+                                        <X size={15} />
+                                      </button>
+                                    </span>
+                                  ) : (
+                                    <span className="flex items-center gap-2">
+                                      <span className="tabular text-piste-pelouse">{typeof t === "number" ? formatChrono(t) : "—"}</span>
+                                      <button
+                                        onClick={() => ouvrirEdition(s, eqId)}
+                                        title="Modifier ce temps à la main"
+                                        className="text-piste-craie/40 hover:text-piste-ambre p-1"
+                                      >
+                                        <Pencil size={13} />
+                                      </button>
+                                    </span>
+                                  )}
                                 </div>
+                                {edition && edition.serieId === s.id && edition.eqId === eqId && edition.erreur && (
+                                  <div className="text-piste-brique">{edition.erreur}</div>
+                                )}
+                                {libelleCorrection(s, eqId) && (
+                                  <div className="flex items-center gap-2 text-piste-ambre">
+                                    <span>Temps {libelleCorrection(s, eqId)}</span>
+                                    <button
+                                      onClick={() => retablir(s.id, eqId)}
+                                      className="flex items-center gap-1 text-piste-craie/40 hover:text-piste-ambre underline"
+                                    >
+                                      <RotateCcw size={11} /> rétablir
+                                    </button>
+                                  </div>
+                                )}
                                 <div className="text-piste-craie/50">
                                   {c.membreIds
                                     .map((id, i) => `${i + 1}. ${elevesById[id] ? `${elevesById[id].prenom} ${elevesById[id].nom}` : "élève retiré"}`)
