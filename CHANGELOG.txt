@@ -1,6 +1,16 @@
 CHANGELOG — Relais 200m by C. Guilhem
 =====================================
 
+v2.9.0
+-----
+- CORRECTION de l'indice de transmission (IT) : il était calculé à l'envers
+  (somme des 200m - relais). Il vaut maintenant : meilleur relais - somme des deux 200m
+  individuels. Un IT négatif signifie que le relais va plus vite que les deux coureurs seuls
+  (la transmission fait gagner du temps) et rapporte le plus de points, comme dans le barème.
+- Toutes les notes déjà calculées (Résultats, fiche élève, Récap) se recalculent
+  automatiquement avec la bonne formule : aucune saisie à refaire.
+- Onglet Barème : définition de l'IT corrigée.
+
 v2.8.0
 -----
 - Correction manuelle d'un temps de manche après la course : dans l'onglet Évaluation,

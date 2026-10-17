@@ -73,7 +73,7 @@ export default function TabBareme() {
           Indice de transmission (I.T.) — commun filles/garçons
         </h3>
         <p className="text-xs text-piste-craie/40 mb-2">
-          I.T. = somme des deux 200m individuels des coéquipiers − meilleure des 2 performances de relais.
+          I.T. = meilleure des 2 performances de relais − somme des deux 200m individuels des coéquipiers. Négatif = le passage de témoin fait gagner du temps.
         </p>
         <div className="overflow-x-auto rounded-lg border border-white/10">
           <table className="text-xs">

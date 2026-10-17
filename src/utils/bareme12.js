@@ -6,8 +6,9 @@ import { compositionManche, dateManche } from "./historique";
 //
 // La performance /3 pts est la moyenne de 3 notes obtenues indépendamment sur la même
 // échelle de points (0 à 3) : le temps individuel au 200m, la moyenne des 2 relais, et
-// l'indice de transmission (IT = somme des deux 200m individuels des coéquipiers - la
-// meilleure des 2 performances de relais). Chaque échelle ci-dessous est un tableau de
+// l'indice de transmission (IT = meilleure des 2 performances de relais - somme des deux
+// 200m individuels des coéquipiers ; négatif = le relais va plus vite que les deux coureurs
+// seuls, donc la transmission fait gagner du temps). Corrigé en v2.9.0 : le calcul était inversé. Chaque échelle ci-dessous est un tableau de
 // paliers { seuil, points } ; seuil = valeur maximale (ou minimale pour l'IT) à ne pas
 // dépasser pour obtenir au moins ces points.
 
@@ -22,8 +23,8 @@ const SEUILS_200M_GARCONS = [44, 43, 42, 41, 40, 39, 38, 37, 36, 35, 34, 33.5, 3
 const SEUILS_RELAIS_FILLES_S = [108, 106, 104, 102, 100, 96, 95, 94, 92, 90, 88, 86, 84, 82, 80, 79, 78, 77, 76, 75, 74, 73, 72, 71, 70];
 const SEUILS_RELAIS_GARCONS_S = [85, 84, 83, 82, 81, 80, 78, 76, 74, 72, 70, 68, 66, 65, 64, 63, 62, 61, 60, 59, 58, 57, 56.5, 56, 55.5];
 
-// Indice de transmission, en secondes (peut être négatif : plus c'est petit/négatif, mieux
-// c'est). Seuil = valeur maximale (le "pire" IT encore acceptable) pour ces points. Table
+// Indice de transmission = temps du relais - somme des 200m individuels, en secondes (peut être
+// négatif : plus c'est petit/négatif, mieux c'est). Seuil = valeur maximale (le "pire" IT encore acceptable) pour ces points. Table
 // unique, commune filles/garçons.
 const SEUILS_IT_S = [3.5, 3.2, 3, 2.5, 2.25, 2, 1.75, 1.5, 1, 0.7, 0.5, 0.2, 0, -0.1, -0.2, -0.3, -0.4, -0.5, -0.6, -0.7, -0.8, -0.9, -1, -1.1, -1.2];
 
@@ -76,7 +77,7 @@ export function calculerPerformance(eleve, equipe, elevesById, series) {
   const meilleurRelaisBrutMs = Math.min(...manches);
   const moyenneRelaisMs = moyenneRelaisBruteMs * ratio;
   const meilleurRelaisMs = meilleurRelaisBrutMs * ratio;
-  const itSecondes = ((sommeIndivBrute - meilleurRelaisBrutMs) * ratio) / 1000;
+  const itSecondes = ((meilleurRelaisBrutMs - sommeIndivBrute) * ratio) / 1000;
 
   const bareme200 = eleve.sexe === "F" ? BAREME_200M_FILLES : BAREME_200M_GARCONS;
   const baremeRelais = eleve.sexe === "F" ? BAREME_RELAIS_FILLES : BAREME_RELAIS_GARCONS;
@@ -115,7 +116,7 @@ export function performanceDepuisTempsRelais(eleve, equipe, elevesById, arriveeM
   const ratio = 2 / nb;
   const sommeIndivBrute = eleve.temps200 + coequipiers.reduce((a, c) => a + c.temps200, 0);
   const relaisMs = arriveeMs * ratio;
-  const itSecondes = ((sommeIndivBrute - arriveeMs) * ratio) / 1000;
+  const itSecondes = ((arriveeMs - sommeIndivBrute) * ratio) / 1000;
 
   const bareme200 = eleve.sexe === "F" ? BAREME_200M_FILLES : BAREME_200M_GARCONS;
   const baremeRelais = eleve.sexe === "F" ? BAREME_RELAIS_FILLES : BAREME_RELAIS_GARCONS;
@@ -185,7 +186,7 @@ export function calculerPerformanceEleve(eleve, elevesById, equipes, series, mod
       adhoc: !!team.adhoc,
       arriveeMs,
       relaisEquivMs: arriveeMs * ratio,
-      itSecondes: ((sommeIndivBrute - arriveeMs) * ratio) / 1000,
+      itSecondes: ((arriveeMs - sommeIndivBrute) * ratio) / 1000,
     });
   });
 
@@ -246,7 +247,7 @@ export function detailNoteManche(eleve, equipe, elevesById, arriveeMs) {
   const ratio = 2 / nb;
   const sommeIndivBrute = eleve.temps200 + coequipiers.reduce((a, c) => a + c.temps200, 0);
   const relaisMs = arriveeMs * ratio;
-  const itSecondes = ((sommeIndivBrute - arriveeMs) * ratio) / 1000;
+  const itSecondes = ((arriveeMs - sommeIndivBrute) * ratio) / 1000;
   const bareme200 = eleve.sexe === "F" ? BAREME_200M_FILLES : BAREME_200M_GARCONS;
   const baremeRelais = eleve.sexe === "F" ? BAREME_RELAIS_FILLES : BAREME_RELAIS_GARCONS;
   const note200 = chercherPoints(eleve.temps200 / 1000, bareme200);
