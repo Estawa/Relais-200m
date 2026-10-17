@@ -1,7 +1,7 @@
 import React from "react";
 
 // Schéma vectoriel des distances de la course en 3 x 50 m, avec un zoom sur
-// la structure d'une zone de transmission (zone d'élan 5 m + zone de
+// la structure d'une zone de transmission (zone d'élan 10 m + zone de
 // transmission 20 m, centrée sur le milieu).
 export default function SchemaDistances() {
   return (
@@ -30,7 +30,7 @@ export default function SchemaDistances() {
       <svg viewBox="0 0 260 70" className="w-full h-auto text-piste-craie">
         <line x1="10" y1="35" x2="250" y2="35" stroke="currentColor" strokeWidth="1.2" />
         {[
-          [30, "-15 m", "Début élan"],
+          [30, "-20 m", "Début élan"],
           [90, "-10 m", "Début ZT"],
           [150, "0", "Milieu ZT"],
           [210, "+10 m", "Fin ZT"],
@@ -45,7 +45,7 @@ export default function SchemaDistances() {
         <line x1="30" y1="16" x2="90" y2="16" stroke="currentColor" strokeWidth="1" strokeDasharray="3,2" opacity="0.8" />
         <line x1="30" y1="12" x2="30" y2="20" stroke="currentColor" strokeWidth="1" opacity="0.8" />
         <line x1="90" y1="12" x2="90" y2="20" stroke="currentColor" strokeWidth="1" opacity="0.8" />
-        <text x="60" y="9" fontSize="6.5" textAnchor="middle" fill="currentColor" className="text-piste-ambre" opacity="0.9">Zone d'élan (5 m)</text>
+        <text x="60" y="9" fontSize="6.5" textAnchor="middle" fill="currentColor" className="text-piste-ambre" opacity="0.9">Zone d'élan (10 m)</text>
         {/* zone de transmission : trait plein */}
         <line x1="90" y1="24" x2="210" y2="24" stroke="currentColor" strokeWidth="1.4" />
         <line x1="90" y1="20" x2="90" y2="28" stroke="currentColor" strokeWidth="1.2" />
@@ -56,7 +56,7 @@ export default function SchemaDistances() {
       <p className="text-[11px] text-piste-craie/50 mt-3 leading-relaxed">
         Départ → milieu ZT1 = 50 m · Milieu ZT1 → milieu ZT2 = 50 m · Milieu ZT2 → arrivée = 50 m. Début de la zone
         de transmission = 10 m avant le milieu de la zone (fin = 10 m après, soit 20 m au total). Début de la zone
-        d'élan = 5 m avant le début de la zone de transmission.
+        d'élan = 10 m avant le début de la zone de transmission (zones fédérales : 10 m d'élan, 20 m de transmission).
       </p>
     </div>
   );

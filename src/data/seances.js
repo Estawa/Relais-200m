@@ -186,5 +186,5 @@ export const SEANCES = [
 export const DISTANCES_SCHEMA = {
   segments: "Départ → milieu ZT1 = 50 m · Milieu ZT1 → milieu ZT2 = 50 m · Milieu ZT2 → arrivée = 50 m",
   zoneTransmission: "Début de zone = 10 m avant le milieu · Fin de zone = 10 m après le milieu (20 m au total)",
-  zoneElan: "Début de la zone d'élan = 5 m avant le début de la zone de transmission",
+  zoneElan: "Début de la zone d'élan = 10 m avant le début de la zone de transmission (zones fédérales : 10 m d'élan, 20 m de transmission)",
 };

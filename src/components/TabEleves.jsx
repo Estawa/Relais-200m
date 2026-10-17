@@ -13,7 +13,7 @@ import {
   formatDateHeure,
   libelleCorrection,
 } from "../utils/historique";
-import { noteTemps200, detailNoteManche, calculerPerformanceEleve, libelleModeNoteRelais } from "../utils/bareme12";
+import { noteTemps200, detailNoteManche, calculerPerformanceEleve, libelleModeNoteRelais, texteDetailManche } from "../utils/bareme12";
 import TestSerie from "./TestSerie";
 import ImportEleves from "./ImportEleves";
 
@@ -29,7 +29,7 @@ function dateAujourdhui() {
   return new Date().toISOString().slice(0, 10);
 }
 
-function FicheEleveModal({ eleves, elevesById, modeNoteRelais, onMajEleve, equipes, series, classeActive, classesInfo, idInitial, onAjouter, onModifier, onSupprimer, onDeplacer, onFermer }) {
+function FicheEleveModal({ eleves, elevesById, reglages, onMajEleve, equipes, series, classeActive, classesInfo, idInitial, onAjouter, onModifier, onSupprimer, onDeplacer, onFermer }) {
   const [idSelectionne, setIdSelectionne] = useState(idInitial || "");
   const [brouillon, setBrouillon] = useState(() => {
     const e = eleves.find((el) => el.id === idInitial);
@@ -44,7 +44,7 @@ function FicheEleveModal({ eleves, elevesById, modeNoteRelais, onMajEleve, equip
   const eleveActuel = idSelectionne ? eleves.find((el) => el.id === idSelectionne) : null;
   const hist200 = eleveActuel ? historique200(eleveActuel) : [];
   const best200 = meilleurePerf200(hist200);
-  const perfGlobale = eleveActuel ? calculerPerformanceEleve(eleveActuel, elevesById, equipes, series, modeNoteRelais) : null;
+  const perfGlobale = eleveActuel ? calculerPerformanceEleve(eleveActuel, elevesById, equipes, series, reglages) : null;
   const [nouveau200, setNouveau200] = useState("");
 
   function ajouterTemps200Fiche() {
@@ -202,7 +202,7 @@ function FicheEleveModal({ eleves, elevesById, modeNoteRelais, onMajEleve, equip
             <div>
               <div className="flex items-center gap-1.5 text-xs text-piste-craie/50 mb-1.5">
                 <Timer size={13} /> Tests 200m individuels {hist200.length > 0 ? `(${hist200.length})` : ""}
-                <span className="text-piste-craie/30">— seul le meilleur compte pour la note</span>
+                <span className="text-piste-craie/30">— seul le meilleur compte {reglages?.typeBac === "gt" ? "(indice de transmission)" : "pour la note"}</span>
               </div>
               {hist200.length === 0 ? (
                 <p className="text-xs text-piste-craie/30 border border-dashed border-white/10 rounded-lg px-3 py-2 mb-2">
@@ -214,7 +214,7 @@ function FicheEleveModal({ eleves, elevesById, modeNoteRelais, onMajEleve, equip
                     .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0))
                     .map((h) => {
                       const estMeilleur = best200 && h.id === best200.id;
-                      const note = noteTemps200(eleveActuel, h.temps);
+                      const note = noteTemps200(eleveActuel, h.temps, reglages);
                       return (
                         <div
                           key={h.id}
@@ -293,7 +293,7 @@ function FicheEleveModal({ eleves, elevesById, modeNoteRelais, onMajEleve, equip
                   {[...performances].reverse().map(({ serie, equipeId, equipe, temps, date }) => {
                     const retenue = serie.retenues?.[equipeId] !== false;
                     const choisie = (perfGlobale?.serieChoisieIds || []).includes(serie.id);
-                    const d = detailNoteManche(eleveActuel, equipe, elevesById, temps);
+                    const d = detailNoteManche(eleveActuel, equipe, elevesById, temps, reglages);
                     const scores = (serie.temoin?.[equipeId] || []).filter((v) => typeof v === "number");
                     return (
                       <div
@@ -324,14 +324,14 @@ function FicheEleveModal({ eleves, elevesById, modeNoteRelais, onMajEleve, equip
                         </div>
                         <div className="text-piste-craie/50">
                           {d
-                            ? `Relais ${d.noteRelais}/3 · IT ${d.itSecondes >= 0 ? "+" : ""}${d.itSecondes}s ${d.noteIT}/3 · 200m ${d.note200}/3 → perf. ${d.performance}/3`
+                            ? texteDetailManche(d)
                             : "Note non calculable (temps 200m manquant pour un·e coureur·se)"}
                           {scores.length > 0 ? ` · témoin ${scores.join("/")}` : ""}
                         </div>
                         {(choisie || !retenue) && (
                           <div className={choisie ? "text-piste-pelouse" : "text-piste-craie/40"}>
                             {choisie
-                              ? `★ Manche utilisée pour la note (${libelleModeNoteRelais(modeNoteRelais)})`
+                              ? `★ Manche utilisée pour la note (${libelleModeNoteRelais(reglages)})`
                               : "Écartée du calcul de la note (onglet Résultats)"}
                           </div>
                         )}
@@ -503,7 +503,7 @@ function FicheEleveModal({ eleves, elevesById, modeNoteRelais, onMajEleve, equip
   );
 }
 
-export default function TabEleves({ eleves, elevesById, modeNoteRelais, setEleves, equipes, series, classeActive, classesInfo, onDeplacerEleve }) {
+export default function TabEleves({ eleves, elevesById, reglages, setEleves, equipes, series, classeActive, classesInfo, onDeplacerEleve }) {
   const [importOuvert, setImportOuvert] = useState(false);
   const [ficheOuverte, setFicheOuverte] = useState(false);
   const [idFiche, setIdFiche] = useState("");
@@ -702,7 +702,7 @@ export default function TabEleves({ eleves, elevesById, modeNoteRelais, setEleve
         <FicheEleveModal
           eleves={eleves}
           elevesById={elevesById}
-          modeNoteRelais={modeNoteRelais}
+          reglages={reglages}
           onMajEleve={majEleve}
           equipes={equipes}
           series={series}

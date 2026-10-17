@@ -10,13 +10,17 @@ import {
   noteFinSequence12,
   noteFilSequence8,
   noteGenerale20,
+  normaliserReglages,
 } from "../utils/bareme12";
+import { repartitionGTParId } from "../utils/filSequence";
 
 function fmt(v, decimales = 1) {
   return v == null ? "—" : v.toFixed ? v.toFixed(decimales) : v;
 }
 
-export default function RecapTab({ eleves, elevesById, equipes, series, classeActive, modeNoteRelais = "meilleure" }) {
+export default function RecapTab({ eleves, elevesById, equipes, series, classeActive, reglages }) {
+  const r = normaliserReglages(reglages);
+  const gt = r.typeBac === "gt";
   const equipesHabituelles = equipes.filter((eq) => !eq.adhoc);
   const lignes = [];
   [...equipesHabituelles]
@@ -25,14 +29,14 @@ export default function RecapTab({ eleves, elevesById, equipes, series, classeAc
       eq.membreIds.forEach((id) => {
         const el = elevesById[id];
         if (!el) return;
-        const perf = calculerPerformanceEleve(el, elevesById, equipes, series, modeNoteRelais);
+        const perf = calculerPerformanceEleve(el, elevesById, equipes, series, r);
         lignes.push({
           equipe: eq.nom,
           el,
           perf,
-          total12: noteFinSequence12(el, perf),
-          total8: noteFilSequence8(el),
-          total20: noteGenerale20(el, perf),
+          total12: noteFinSequence12(el, perf, r),
+          total8: noteFilSequence8(el, r),
+          total20: noteGenerale20(el, perf, r),
         });
       });
     });
@@ -43,14 +47,14 @@ export default function RecapTab({ eleves, elevesById, equipes, series, classeAc
   eleves
     .filter((e) => !idsAffectes.has(e.id))
     .forEach((el) => {
-      const perf = calculerPerformanceEleve(el, elevesById, equipes, series, modeNoteRelais);
+      const perf = calculerPerformanceEleve(el, elevesById, equipes, series, r);
       lignes.push({
         equipe: "—",
         el,
         perf,
-        total12: noteFinSequence12(el, perf),
-        total8: noteFilSequence8(el),
-        total20: noteGenerale20(el, perf),
+        total12: noteFinSequence12(el, perf, r),
+        total8: noteFilSequence8(el, r),
+        total20: noteGenerale20(el, perf, r),
       });
     });
 
@@ -91,12 +95,58 @@ export default function RecapTab({ eleves, elevesById, equipes, series, classeAc
       ) : (
         <div className="recap-impression bg-white text-black rounded-lg overflow-x-auto p-4">
           <h3 className="font-bold text-base mb-2">
-            Relais Long 2x200m — Classe {classeActive} — Récapitulatif de notation
+            Relais Long 2x200m — Classe {classeActive} — {gt ? "Bac général et technologique" : "Bac professionnel"} — Récapitulatif de notation
           </h3>
           <p className="text-[10px] mb-2">
-            200m : meilleur temps de l'élève. Relais : {libelleModeNoteRelais(modeNoteRelais)} performances
-            du cycle (manches retenues) ; IT : meilleure de ces 2 manches.
+            Relais retenus : {libelleModeNoteRelais(r)} (manches cochées) ; moyenne des 2 pour la note de relais, IT
+            sur le meilleur des 2.{gt ? " AFL 1 = élément 1 /6 + élément 2 /6 ; fil de séquence = AFL 2 + AFL 3." : " 200m : meilleur temps de l'élève."}
           </p>
+          {gt ? (
+          <table className="recap-table w-full text-xs border-collapse">
+            <thead>
+              <tr className="border-b-2 border-black">
+                <th className="text-left px-1.5 py-1">Équipe</th>
+                <th className="text-left px-1.5 py-1">Élève</th>
+                <th className="text-center px-1.5 py-1">Sexe</th>
+                <th className="text-center px-1.5 py-1">Meill. 200m</th>
+                <th className="text-center px-1.5 py-1">Relais (moy.)</th>
+                <th className="text-center px-1.5 py-1">Élém. 1 /6</th>
+                <th className="text-center px-1.5 py-1">IT (s)</th>
+                <th className="text-center px-1.5 py-1">Élém. 2 /6</th>
+                <th className="text-center px-1.5 py-1 font-bold border-r-2 border-black">AFL 1 /12</th>
+                <th className="text-center px-1.5 py-1">Répart.</th>
+                <th className="text-center px-1.5 py-1">AFL 2</th>
+                <th className="text-center px-1.5 py-1">AFL 3</th>
+                <th className="text-center px-1.5 py-1 font-bold">Fil séq./8</th>
+                <th className="text-center px-1.5 py-1 font-bold border-l-2 border-black">TOTAL /20</th>
+              </tr>
+            </thead>
+            <tbody>
+              {lignes.map(({ equipe, el, perf, total12, total8, total20 }) => {
+                const rep = repartitionGTParId(el.filRepartitionGTId);
+                const ok = perf && !perf.horsEpreuve;
+                return (
+                  <tr key={el.id} className="border-b border-black/30">
+                    <td className="px-1.5 py-1">{equipe}</td>
+                    <td className="px-1.5 py-1 whitespace-nowrap">{el.prenom} {el.nom}</td>
+                    <td className="text-center px-1.5 py-1">{el.sexe || "—"}</td>
+                    <td className="text-center px-1.5 py-1 tabular">{el.temps200 != null ? (el.temps200 / 1000).toFixed(1) : "—"}</td>
+                    <td className="text-center px-1.5 py-1 tabular">{ok ? formatChrono(perf.relaisChoisiMs) : "—"}</td>
+                    <td className="text-center px-1.5 py-1 tabular">{ok ? fmt(perf.noteRelais, 2) : "—"}</td>
+                    <td className="text-center px-1.5 py-1 tabular">{ok && perf.itSecondes != null ? `${perf.itSecondes >= 0 ? "+" : ""}${perf.itSecondes}` : "—"}</td>
+                    <td className="text-center px-1.5 py-1 tabular">{ok ? fmt(perf.noteIT, 2) : "—"}</td>
+                    <td className="text-center px-1.5 py-1 tabular font-bold border-r-2 border-black">{fmt(total12, 2)}</td>
+                    <td className="text-center px-1.5 py-1 tabular">{rep.afl2}/{rep.afl3}</td>
+                    <td className="text-center px-1.5 py-1 tabular">{fmt(el.afl2Note, 2)}</td>
+                    <td className="text-center px-1.5 py-1 tabular">{fmt(el.afl3Note, 2)}</td>
+                    <td className="text-center px-1.5 py-1 tabular font-bold">{fmt(total8, 2)}</td>
+                    <td className="text-center px-1.5 py-1 tabular font-bold border-l-2 border-black">{fmt(total20, 2)}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+          ) : (
           <table className="recap-table w-full text-xs border-collapse">
             <thead>
               <tr className="border-b-2 border-black">
@@ -145,6 +195,7 @@ export default function RecapTab({ eleves, elevesById, equipes, series, classeAc
               ))}
             </tbody>
           </table>
+          )}
 
           <h3 className="font-bold text-sm mt-6 mb-1">Historique des manches de relais (toutes conservées)</h3>
           <table className="recap-table w-full text-xs border-collapse">
@@ -153,7 +204,7 @@ export default function RecapTab({ eleves, elevesById, equipes, series, classeAc
                 <th className="text-left px-1.5 py-1">Date</th>
                 <th className="text-left px-1.5 py-1">Manche</th>
                 <th className="text-left px-1.5 py-1">Équipe</th>
-                <th className="text-left px-1.5 py-1">Coureurs (ordre de passage) — perf./3 de chacun</th>
+                <th className="text-left px-1.5 py-1">Coureurs (ordre de passage) — {gt ? "AFL 1 /12" : "perf./3"} de chacun</th>
                 <th className="text-center px-1.5 py-1">Temps</th>
                 <th className="text-center px-1.5 py-1">Retenue</th>
               </tr>
@@ -176,7 +227,7 @@ export default function RecapTab({ eleves, elevesById, equipes, series, classeAc
                             .map((id, i) => {
                               const m = elevesById[id];
                               if (!m) return `${i + 1}. élève retiré`;
-                              const d = detailNoteManche(m, c, elevesById, t);
+                              const d = detailNoteManche(m, c, elevesById, t, r);
                               return `${i + 1}. ${m.prenom} ${m.nom}${d ? ` (${d.performance})` : ""}`;
                             })
                             .join(" → ")}
@@ -200,7 +251,7 @@ export default function RecapTab({ eleves, elevesById, equipes, series, classeAc
             <thead>
               <tr className="border-b-2 border-black">
                 <th className="text-left px-1.5 py-1">Élève</th>
-                <th className="text-left px-1.5 py-1">Tests (date — temps — note /3)</th>
+                <th className="text-left px-1.5 py-1">Tests (date — temps{gt ? "" : " — note /3"})</th>
               </tr>
             </thead>
             <tbody>
@@ -219,7 +270,7 @@ export default function RecapTab({ eleves, elevesById, equipes, series, classeAc
                               .sort((a, b) => new Date(a.date || 0) - new Date(b.date || 0))
                               .map(
                                 (h) =>
-                                  `${best && h.id === best.id ? "* " : ""}${formatDateHeure(h.date)} — ${(h.temps / 1000).toFixed(1)}s — ${noteTemps200(el, h.temps)}/3${h.archive ? " (archivé)" : ""}`
+                                  `${best && h.id === best.id ? "* " : ""}${formatDateHeure(h.date)} — ${(h.temps / 1000).toFixed(1)}s${gt ? "" : ` — ${noteTemps200(el, h.temps, r)}/3`}${h.archive ? " (archivé)" : ""}`
                               )
                               .join(" ; ")}
                       </td>

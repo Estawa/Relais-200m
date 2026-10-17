@@ -1,6 +1,26 @@
 CHANGELOG — Relais 200m by C. Guilhem
 =====================================
 
+v2.11.0
+-----
+- Notes calculées selon le type de bac de la classe, avec les protocoles du lycée
+  Georges-Brassens. Aucun temps enregistré n'est modifié : seules les notes sont recalculées.
+- Bac Pro : nouveau barème du protocole du lycée (16 paliers sur 3 points) pour le 200m, le
+  relais et l'indice de transmission. Structure inchangée : positionnement /4 + performance /3
+  + AFLP 2 /5, puis AFLP 4 + AFLP 5 /8.
+- Bac GT : AFL 1 /12 = élément 1 (moyenne des 2 relais retenus, barème /6) + élément 2
+  (indice de transmission sur le meilleur des 2, barème /6). Le 200m n'est pas noté, il sert
+  au calcul de l'indice.
+- Réglage par classe « Relais retenus » (onglet Résultats) : 2 meilleurs du cycle, 2 derniers
+  du cycle, ou jour de l'épreuve (choix de la date ; seuls les relais de ce jour comptent).
+- Onglet Rôles : en Bac GT, fil de séquence AFL 2 + AFL 3 en points fixes (répartition 2/6,
+  4/4, 6/2 ; AFL 3 = 2 rôles parmi starter, chronométreur, juge de zone, coach-observateur,
+  moyenne des 2). En Bac Pro : AFLP 4 et 5 en plages, comme avant. Les saisies GT et Pro sont
+  rangées séparément : changer le type de bac n'efface rien.
+- Onglets Barème et Récap adaptés au type de bac de la classe.
+- Zone d'élan portée à 10 m (zones fédérales) dans le schéma et les séances.
+- Trinômes : toujours ramenés à un équivalent binôme par règle de trois.
+
 v2.10.0
 -----
 - Nouveau réglage par classe : type d'évaluation "Bac GT" (général et technologique) ou

@@ -11,10 +11,17 @@ import {
   OPTIONS_AFLP2,
   MODES_NOTE_RELAIS,
   libelleModeNoteRelais,
+  normaliserReglages,
+  joursAvecManches,
+  formatJour,
 } from "../utils/bareme12";
 import { formatDateCourte, correctionManche } from "../utils/historique";
 
-export default function TabResultats({ equipes, elevesById, series, setSeries, eleves, setEleves, modeNoteRelais = "meilleure", setModeNoteRelais }) {
+export default function TabResultats({ equipes, elevesById, series, setSeries, eleves, setEleves, reglages, setModeNoteRelais, setDateEpreuve }) {
+  const r = normaliserReglages(reglages);
+  const gt = r.typeBac === "gt";
+  const modeNoteRelais = r.mode;
+  const jours = joursAvecManches(series);
   function modifier(id, champ, valeur) {
     setEleves((prev) => prev.map((e) => (e.id === id ? { ...e, [champ]: valeur === "" ? null : Number(valeur) } : e)));
   }
@@ -39,9 +46,10 @@ export default function TabResultats({ equipes, elevesById, series, setSeries, e
     <div>
       <h2 className="font-display text-2xl tracking-wide mb-2">Résultats</h2>
       <p className="text-xs text-piste-craie/40 mb-5">
-        Notation officielle de la situation d'évaluation fin de séquence, sur 12 points (AFLP 1 : 7 pts — AFLP 2 : 5
-        pts). Les 8 points restants (fil de séquence) se répartissent sur ce qui est déjà suivi dans l'onglet Rôles.
-        Le barème officiel est calibré pour des binômes ; pour un trinôme, le temps de relais et la somme des 200m
+        {gt
+          ? "Bac GT — AFL 1 sur 12 points : élément 1 (performance, moyenne des 2 relais retenus) /6 + élément 2 (indice de transmission sur le meilleur des 2) /6, barèmes du protocole du lycée. Le 200m individuel n'est pas noté : il sert au calcul de l'indice. Les 8 points restants (AFL 2 + AFL 3) se saisissent dans l'onglet Rôles."
+          : "Bac Pro — situation de fin de séquence sur 12 points (AFLP 1 : positionnement /4 + performance /3 — AFLP 2 : /5), barème du protocole du lycée (16 paliers). Les 8 points restants (AFLP 4 + AFLP 5) se saisissent dans l'onglet Rôles."}{" "}
+        Le barème est calibré pour des binômes ; pour un trinôme, le temps de relais et la somme des 200m
         individuels sont ramenés à un équivalent binôme par une règle de trois (× 2/3) avant d'être comparés au
         même barème. Chaque élève peut être chronométré·e autant de fois que nécessaire sur l'ensemble du cycle,
         avec son équipe habituelle ou une équipe du jour (en cas d'absence d'un·e partenaire) : toutes ses
@@ -51,7 +59,7 @@ export default function TabResultats({ equipes, elevesById, series, setSeries, e
       </p>
 
       <div className="flex flex-wrap items-center gap-2 mb-5 bg-piste-panneau rounded-lg border border-white/10 px-4 py-3">
-        <span className="text-xs text-piste-craie/60">Note de relais (évaluation finale) calculée sur :</span>
+        <span className="text-xs text-piste-craie/60">Relais retenus pour la note :</span>
         {MODES_NOTE_RELAIS.map((m) => (
           <button
             key={m.valeur}
@@ -65,10 +73,29 @@ export default function TabResultats({ equipes, elevesById, series, setSeries, e
             {m.libelle}
           </button>
         ))}
+        {modeNoteRelais === "epreuve" && (
+          <label className="flex items-center gap-2 text-xs w-full">
+            <span className="text-piste-craie/60">Jour de l'épreuve :</span>
+            <select
+              value={r.dateEpreuve || ""}
+              onChange={(ev) => setDateEpreuve && setDateEpreuve(ev.target.value || null)}
+              className="bg-piste-nuit/60 border border-white/10 rounded px-2 py-1"
+            >
+              <option value="">— choisir une date —</option>
+              {r.dateEpreuve && !jours.includes(r.dateEpreuve) && (
+                <option value={r.dateEpreuve}>{formatJour(r.dateEpreuve)} (aucune manche)</option>
+              )}
+              {jours.map((j) => (
+                <option key={j} value={j}>{formatJour(j)}</option>
+              ))}
+            </select>
+          </label>
+        )}
         <span className="text-[11px] text-piste-craie/40 w-full">
-          Parmi les manches cochées de chaque élève (si une seule manche, elle compte seule). La note de relais
-          porte sur la moyenne des 2 manches choisies, l'indice de transmission sur la meilleure des deux. Les
-          manches utilisées sont repérées par ★ ci-dessous. Le 200m individuel : meilleur temps du cycle.
+          Parmi les manches cochées de chaque élève (si une seule manche, elle compte seule). {gt ? "Élément 1" : "La note de relais"} :
+          moyenne des 2 relais retenus ; {gt ? "élément 2" : "indice de transmission"} : sur le meilleur des deux.
+          {modeNoteRelais === "epreuve" ? " Seuls les relais courus le jour de l'épreuve comptent (les 2 meilleurs)." : ""} Les
+          manches utilisées sont repérées par ★ ci-dessous.{gt ? "" : " Le 200m individuel : meilleur temps du cycle."}
         </span>
       </div>
 
@@ -87,10 +114,10 @@ export default function TabResultats({ equipes, elevesById, series, setSeries, e
                   {eq.membreIds.map((id) => {
                     const el = elevesById[id];
                     if (!el) return null;
-                    const perf = calculerPerformanceEleve(el, elevesById, equipes, series, modeNoteRelais);
-                    const total12 = noteFinSequence12(el, perf);
-                    const total8 = noteFilSequence8(el);
-                    const total20 = noteGenerale20(el, perf);
+                    const perf = calculerPerformanceEleve(el, elevesById, equipes, series, r);
+                    const total12 = noteFinSequence12(el, perf, r);
+                    const total8 = noteFilSequence8(el, r);
+                    const total20 = noteGenerale20(el, perf, r);
                     const listeManches = manches(el.id);
 
                     return (
@@ -121,7 +148,7 @@ export default function TabResultats({ equipes, elevesById, series, setSeries, e
                               {listeManches.map(({ serie, equipeId, equipe, date }) => {
                                 const retenue = serie.retenues?.[equipeId] !== false;
                                 const arriveeMs = serie.arrivals[equipeId];
-                                const p = performanceDepuisTempsRelais(el, equipe, elevesById, arriveeMs);
+                                const p = performanceDepuisTempsRelais(el, equipe, elevesById, arriveeMs, r);
                                 const choisie = (perf?.serieChoisieIds || []).includes(serie.id);
                                 const coequipiers = equipe.membreIds
                                   .filter((mid) => mid !== el.id)
@@ -147,7 +174,7 @@ export default function TabResultats({ equipes, elevesById, series, setSeries, e
                                     {formatDateCourte(date)} · {serie.nom}
                                     {equipe.adhoc ? " (jour)" : ""} · avec {coequipiers} · {formatChrono(arriveeMs)}
                                     {correctionManche(serie, equipeId) ? " (corrigé)" : ""}
-                                    {p != null ? ` → ${p}/3` : ""}
+                                    {p != null ? ` → ${p}/${gt ? 12 : 3}` : ""}
                                   </label>
                                 );
                               })}
@@ -156,21 +183,39 @@ export default function TabResultats({ equipes, elevesById, series, setSeries, e
                         )}
 
                         <div className="text-xs text-piste-craie/50 mb-2">
-                          {perf ? (
+                          {perf && perf.horsEpreuve ? (
+                            r.dateEpreuve
+                              ? `Aucun relais retenu le jour de l'épreuve (${formatJour(r.dateEpreuve)}) pour cet·te élève.`
+                              : "Choisis le jour de l'épreuve ci-dessus pour calculer la note."
+                          ) : perf && gt ? (
+                            <>
+                              AFL 1{perf.aUneEquipeDuJour ? " (dont au moins une manche en équipe du jour)" : ""} :{" "}
+                              <span className="text-piste-craie/80">
+                                élément 1 relais ({perf.nbManchesChoisies > 1 ? libelleModeNoteRelais(r) : "1 seule manche"} :{" "}
+                                {formatChrono(perf.relaisChoisiMs)}) {perf.noteRelais}/6 · élément 2 IT{" "}
+                                {perf.itSecondes == null ? "— (200m manquant)" : `${perf.itSecondes >= 0 ? "+" : ""}${perf.itSecondes}s`}{" "}
+                                {perf.noteIT ?? "—"}/6
+                              </span>{" "}
+                              → {perf.performance}/12
+                            </>
+                          ) : perf ? (
                             <>
                               Performance{perf.aUneEquipeDuJour ? " (dont au moins une manche en équipe du jour)" : ""} :{" "}
                               <span className="text-piste-craie/80">
-                                200m (meilleur) {perf.note200}/3 · relais ({perf.nbManchesChoisies > 1 ? libelleModeNoteRelais(perf.mode) : "1 seule manche"}{" "}
+                                200m (meilleur) {perf.note200}/3 · relais ({perf.nbManchesChoisies > 1 ? libelleModeNoteRelais(r) : "1 seule manche"}{" "}
                                 sur {perf.nbManches} : {formatChrono(perf.relaisChoisiMs)}) {perf.noteRelais}/3 · IT {perf.itSecondes >= 0 ? "+" : ""}
                                 {perf.itSecondes}s {perf.noteIT}/3
                               </span>{" "}
                               → moyenne {perf.performance}/3
                             </>
+                          ) : gt ? (
+                            "AFL 1 non calculable (aucune manche chronométrée retenue)."
                           ) : (
                             "Performance non calculable (temps 200m manquant pour l'élève ou un·e coéquipier·e, ou aucune manche chronométrée)."
                           )}
                         </div>
 
+                        {!gt && (
                         <div className="flex flex-wrap items-center gap-4 text-xs">
                           <label className="flex items-center gap-1.5">
                             <span className="text-piste-craie/50">AFLP 1 — Positionnement (/4)</span>
@@ -199,6 +244,7 @@ export default function TabResultats({ equipes, elevesById, series, setSeries, e
                             </select>
                           </label>
                         </div>
+                        )}
                       </div>
                     );
                   })}

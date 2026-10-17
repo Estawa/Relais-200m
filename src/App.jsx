@@ -205,6 +205,11 @@ export default function App() {
     [classeInfo.series, classeInfo.equipes]
   );
   const modeNoteRelais = classeInfo.modeNoteRelais || "meilleure";
+  // Réglages de notation de la classe (v2.11.0) : type de bac + relais retenus (+ jour de l'épreuve).
+  const reglagesNote = useMemo(
+    () => ({ typeBac: classeInfo.typeBac || "pro", mode: modeNoteRelais, dateEpreuve: classeInfo.dateEpreuve || null }),
+    [classeInfo.typeBac, modeNoteRelais, classeInfo.dateEpreuve]
+  );
   const classementActif = classeInfo.classementTokens;
 
   const elevesById = useMemo(() => {
@@ -290,6 +295,14 @@ export default function App() {
     setClassesData((prev) => {
       const actuelle = prev[classeActive] || CLASSE_VIDE;
       return { ...prev, [classeActive]: { ...actuelle, modeNoteRelais: mode } };
+    });
+  }
+
+  // Jour marqué comme « épreuve » (mode « Jour de l'épreuve », v2.11.0), AAAA-MM-JJ.
+  function setDateEpreuve(jour) {
+    setClassesData((prev) => {
+      const actuelle = prev[classeActive] || CLASSE_VIDE;
+      return { ...prev, [classeActive]: { ...actuelle, dateEpreuve: jour || null } };
     });
   }
 
@@ -420,7 +433,7 @@ export default function App() {
               Relais <span className="text-piste-brique">200m</span> <span className="text-piste-ambre">· {classeActive}</span>
             </h1>
             <p className="text-xs text-piste-craie/50 mt-1">
-              <span className={classeInfo.typeBac ? "text-piste-ambre" : "text-piste-brique"}>{libelleTypeBac(classeInfo.typeBac)}</span> · By C. Guilhem <span className="text-piste-craie/25">· v2.10.0 · {profActif}{vue === "globale" ? " (vue globale)" : ""}</span>
+              <span className={classeInfo.typeBac ? "text-piste-ambre" : "text-piste-brique"}>{libelleTypeBac(classeInfo.typeBac)}</span> · By C. Guilhem <span className="text-piste-craie/25">· v2.11.0 · {profActif}{vue === "globale" ? " (vue globale)" : ""}</span>
             </p>
           </div>
         </div>
@@ -432,9 +445,9 @@ export default function App() {
           <ChoixTypeBac valeur={null} onChange={(v) => setTypeBacClasse(classeActive, v)} />
         </div>
       )}
-      {classeInfo.typeBac === "gt" && (ongletActif === "resultats" || ongletActif === "bareme" || ongletActif === "recap") && (
+      {!classeInfo.typeBac && (ongletActif === "resultats" || ongletActif === "bareme" || ongletActif === "recap" || ongletActif === "roles") && (
         <div className="bg-piste-ambre/15 text-piste-ambre text-xs px-4 py-2 text-center">
-          Classe de Bac GT : les notes affichées utilisent encore le barème Bac Pro. Le barème Bac GT sera intégré à l'étape suivante.
+          Type de bac non choisi : les notes sont calculées avec le protocole Bac Pro en attendant.
         </div>
       )}
 
@@ -474,7 +487,7 @@ export default function App() {
 
       <main className="flex-1 max-w-4xl w-full mx-auto px-4 py-6 sm:px-6">
         {ongletActif === "eleves" && (
-          <TabEleves eleves={elevesClasse} elevesById={elevesById} setEleves={setEleves} equipes={equipesClasse} series={seriesClasse} modeNoteRelais={modeNoteRelais} classeActive={classeActive} classesInfo={classesInfo} onDeplacerEleve={deplacerEleveVersClasse} />
+          <TabEleves eleves={elevesClasse} elevesById={elevesById} setEleves={setEleves} equipes={equipesClasse} series={seriesClasse} reglages={reglagesNote} classeActive={classeActive} classesInfo={classesInfo} onDeplacerEleve={deplacerEleveVersClasse} />
         )}
         {ongletActif === "equipes" && (
           <TabEquipes
@@ -498,14 +511,15 @@ export default function App() {
             setSeries={setSeries}
             eleves={elevesClasse}
             setEleves={setEleves}
-            modeNoteRelais={modeNoteRelais}
+            reglages={reglagesNote}
             setModeNoteRelais={setModeNoteRelais}
+            setDateEpreuve={setDateEpreuve}
           />
         )}
-        {ongletActif === "roles" && <TabRoles eleves={elevesClasse} setEleves={setEleves} />}
-        {ongletActif === "bareme" && <TabBareme />}
+        {ongletActif === "roles" && <TabRoles eleves={elevesClasse} setEleves={setEleves} typeBac={reglagesNote.typeBac} />}
+        {ongletActif === "bareme" && <TabBareme typeBac={reglagesNote.typeBac} />}
         {ongletActif === "recap" && (
-          <RecapTab eleves={elevesClasse} elevesById={elevesById} equipes={equipesClasse} series={seriesClasse} classeActive={classeActive} modeNoteRelais={modeNoteRelais} />
+          <RecapTab eleves={elevesClasse} elevesById={elevesById} equipes={equipesClasse} series={seriesClasse} classeActive={classeActive} reglages={reglagesNote} />
         )}
         {ongletActif === "seances" && <TabSeances />}
       </main>

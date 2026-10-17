@@ -5,6 +5,11 @@ import {
   BAREME_RELAIS_FILLES,
   BAREME_RELAIS_GARCONS,
   BAREME_IT,
+  BAREME_GT_RELAIS_FILLES,
+  BAREME_GT_RELAIS_GARCONS,
+  BAREME_GT_IT,
+  REF_GT_200M_FILLES,
+  REF_GT_200M_GARCONS,
 } from "../utils/bareme12";
 
 function fmt(s) {
@@ -29,8 +34,19 @@ function Ligne({ titre, bareme, formatter = fmt }) {
   );
 }
 
-function Tableau({ titre, bareme200, baremeRelais }) {
-  const pointsTries = [...bareme200].sort((a, b) => a.points - b.points).map((p) => p.points);
+function LigneRef({ titre, valeurs }) {
+  return (
+    <tr className="border-t border-white/5 text-piste-craie/40">
+      <td className="px-2 py-1.5 whitespace-nowrap sticky left-0 bg-piste-panneau">{titre}</td>
+      {valeurs.map((v, i) => (
+        <td key={i} className="px-2 py-1.5 text-center tabular">{fmt(v)}</td>
+      ))}
+    </tr>
+  );
+}
+
+function Tableau({ titre, bareme200, baremeRelais, ref200 }) {
+  const pointsTries = [...baremeRelais].sort((a, b) => a.points - b.points).map((p) => p.points);
   return (
     <div className="mb-6">
       <h3 className="font-display text-xl tracking-wide mb-2">{titre}</h3>
@@ -45,8 +61,9 @@ function Tableau({ titre, bareme200, baremeRelais }) {
             </tr>
           </thead>
           <tbody>
-            <Ligne titre="200m" bareme={bareme200} />
+            {bareme200 && <Ligne titre="200m" bareme={bareme200} />}
             <Ligne titre="Relais (moy.)" bareme={baremeRelais} />
+            {ref200 && <LigneRef titre="200m (repère)" valeurs={ref200} />}
           </tbody>
         </table>
       </div>
@@ -54,43 +71,61 @@ function Tableau({ titre, bareme200, baremeRelais }) {
   );
 }
 
-export default function TabBareme() {
+function TableauIT({ bareme, titre, texte }) {
   return (
     <div>
-      <h2 className="font-display text-2xl tracking-wide mb-2">Barème officiel — Bac Pro Terminale</h2>
+      <h3 className="font-display text-xl tracking-wide mb-2">{titre}</h3>
+      <p className="text-xs text-piste-craie/40 mb-2">{texte}</p>
+      <div className="overflow-x-auto rounded-lg border border-white/10">
+        <table className="text-xs">
+          <thead className="bg-piste-panneau text-piste-craie/50">
+            <tr>
+              <th className="px-2 py-1.5 text-left sticky left-0 bg-piste-panneau">Points</th>
+              {[...bareme].sort((a, b) => a.points - b.points).map((p) => (
+                <th key={p.points} className="px-2 py-1.5 tabular font-semibold text-piste-ambre">{p.points}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            <Ligne titre="I.T. max" bareme={bareme} formatter={(s) => (s > 0 ? `+${s}` : s)} />
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+const TEXTE_IT = "I.T. = temps du relais − somme des deux 200m individuels des coéquipiers, calculé sur le meilleur des 2 relais retenus. Négatif = le passage de témoin fait gagner du temps (plus de points).";
+
+export default function TabBareme({ typeBac }) {
+  if (typeBac === "gt") {
+    return (
+      <div>
+        <h2 className="font-display text-2xl tracking-wide mb-2">Barème — Bac général et technologique</h2>
+        <p className="text-xs text-piste-craie/40 mb-5">
+          Référentiel d'évaluation du lycée Georges-Brassens, Relais long 2x200m. AFL 1 sur 12 points : élément 1
+          (performance, moyenne des 2 relais retenus) sur 6 points + élément 2 (indice de transmission) sur 6
+          points. Les temps de 200m sont donnés comme repères : ils ne sont pas notés. Seuil national : 1'20 (filles),
+          1'04 (garçons). Affichage pour référence, utilisé automatiquement dans l'onglet Résultats.
+        </p>
+        <Tableau titre="Élément 1 — Filles" baremeRelais={BAREME_GT_RELAIS_FILLES} ref200={REF_GT_200M_FILLES} />
+        <Tableau titre="Élément 1 — Garçons" baremeRelais={BAREME_GT_RELAIS_GARCONS} ref200={REF_GT_200M_GARCONS} />
+        <TableauIT bareme={BAREME_GT_IT} titre="Élément 2 — Indice de transmission (filles et garçons)" texte={TEXTE_IT} />
+      </div>
+    );
+  }
+  return (
+    <div>
+      <h2 className="font-display text-2xl tracking-wide mb-2">Barème — Bac professionnel</h2>
       <p className="text-xs text-piste-craie/40 mb-5">
-        Référentiel d'évaluation établissement, Académie de Versailles, session 2021 — Relais Long 2x200m. Grille
-        utilisée automatiquement dans l'onglet Résultats pour calculer les 3 pts de performance (200m + moyenne des
-        2 relais + indice de transmission, moyenne des trois notes). Affichage pour référence uniquement — non
-        modifiable ici.
+        Référentiel d'évaluation du lycée Georges-Brassens, Relais long 2x200m (16 paliers). Les 3 points de
+        performance de l'AFLP 1 sont la moyenne de trois notes : meilleur 200m, moyenne des 2 relais retenus,
+        indice de transmission. Affichage pour référence, utilisé automatiquement dans l'onglet Résultats.
       </p>
 
       <Tableau titre="Filles" bareme200={BAREME_200M_FILLES} baremeRelais={BAREME_RELAIS_FILLES} />
       <Tableau titre="Garçons" bareme200={BAREME_200M_GARCONS} baremeRelais={BAREME_RELAIS_GARCONS} />
-
-      <div>
-        <h3 className="font-display text-xl tracking-wide mb-2">
-          Indice de transmission (I.T.) — commun filles/garçons
-        </h3>
-        <p className="text-xs text-piste-craie/40 mb-2">
-          I.T. = meilleure des 2 performances de relais − somme des deux 200m individuels des coéquipiers. Négatif = le passage de témoin fait gagner du temps.
-        </p>
-        <div className="overflow-x-auto rounded-lg border border-white/10">
-          <table className="text-xs">
-            <thead className="bg-piste-panneau text-piste-craie/50">
-              <tr>
-                <th className="px-2 py-1.5 text-left sticky left-0 bg-piste-panneau">Points</th>
-                {[...BAREME_IT].sort((a, b) => a.points - b.points).map((p) => (
-                  <th key={p.points} className="px-2 py-1.5 tabular font-semibold text-piste-ambre">{p.points}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              <Ligne titre="I.T. max" bareme={BAREME_IT} formatter={(s) => (s > 0 ? `+${s}` : s)} />
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <TableauIT bareme={BAREME_IT} titre="Indice de transmission (I.T.) — commun filles/garçons" texte={TEXTE_IT} />
     </div>
   );
 }
