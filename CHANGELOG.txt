@@ -1,6 +1,17 @@
 CHANGELOG — Relais 200m by C. Guilhem
 =====================================
 
+v2.10.0
+-----
+- Nouveau réglage par classe : type d'évaluation "Bac GT" (général et technologique) ou
+  "Bac Pro". Il se choisit dans "Mes classes" (deux boutons sur chaque classe) ou en haut
+  d'une classe ouverte tant qu'il n'est pas renseigné.
+- Les classes déjà créées restent intactes (élèves, équipes, classement, manches, notes) :
+  elles s'affichent simplement "Type de bac à préciser" jusqu'au choix.
+- Le type choisi s'affiche sous le titre de la classe.
+- Pour une classe de Bac GT, un bandeau rappelle dans Résultats, Barème et Récap que les notes
+  utilisent encore le barème Bac Pro (le barème Bac GT sera intégré ensuite).
+
 v2.9.0
 -----
 - CORRECTION de l'indice de transmission (IT) : il était calculé à l'envers

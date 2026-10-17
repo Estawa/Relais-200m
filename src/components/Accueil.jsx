@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Trash2, Plus, ChevronRight, Users, Share2, Copy, Check, LogOut } from "lucide-react";
 import ImportEleves from "./ImportEleves";
 import AccesTab from "./AccesTab";
+import { ChoixTypeBac, libelleTypeBac } from "./TypeBac";
 
 function PartagerApp() {
   const [ouvert, setOuvert] = useState(false);
@@ -61,7 +62,7 @@ function PartagerApp() {
 export default function Accueil({
   profConnecte, estAdmin, acces, onSauverAcces,
   vue, setVue, collegueVu, setCollegueVu,
-  eleves, classesInfo, onImporte, onOuvrir, onSupprimer, onDeconnexion,
+  eleves, classesInfo, onImporte, onOuvrir, onSupprimer, onTypeBac, onDeconnexion,
   syncOk,
 }) {
   const [importOuvert, setImportOuvert] = useState(false);
@@ -148,10 +149,14 @@ export default function Accueil({
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="font-display text-lg tracking-wide leading-none truncate">{c.nom}</div>
-                        <div className="text-xs text-piste-craie/40 mt-0.5">{c.nbEleves} élève{c.nbEleves > 1 ? "s" : ""}</div>
+                        <div className="text-xs text-piste-craie/40 mt-0.5">
+                          {c.nbEleves} élève{c.nbEleves > 1 ? "s" : ""} ·{" "}
+                          <span className={c.typeBac ? "text-piste-ambre" : "text-piste-brique"}>{libelleTypeBac(c.typeBac)}</span>
+                        </div>
                       </div>
                       <ChevronRight size={18} className="text-piste-craie/30 shrink-0" />
                     </button>
+                    {onTypeBac && <ChoixTypeBac valeur={c.typeBac} onChange={(v) => onTypeBac(c.nom, v)} />}
                     <button onClick={() => onSupprimer(c.nom)} title={`Supprimer la classe ${c.nom}`} className="p-2 text-piste-craie/30 hover:text-piste-brique shrink-0">
                       <Trash2 size={16} />
                     </button>

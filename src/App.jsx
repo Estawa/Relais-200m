@@ -15,6 +15,7 @@ import {
 import Splash from "./components/Splash";
 import Connexion from "./components/Connexion";
 import Accueil from "./components/Accueil";
+import { ChoixTypeBac, libelleTypeBac } from "./components/TypeBac";
 import TabEleves from "./components/TabEleves";
 import TabEquipes from "./components/TabEquipes";
 import TabCourse from "./components/TabCourse";
@@ -217,7 +218,7 @@ export default function App() {
   const classesInfo = useMemo(
     () =>
       Object.entries(classesData)
-        .map(([nom, d]) => ({ nom, nbEleves: d.eleves.length }))
+        .map(([nom, d]) => ({ nom, nbEleves: d.eleves.length, typeBac: d.typeBac || null }))
         .sort((a, b) => a.nom.localeCompare(b.nom)),
     [classesData]
   );
@@ -320,6 +321,20 @@ export default function App() {
     });
   }
 
+  // Type d'évaluation de la classe (Bac GT / Bac Pro), v2.10.0. Ne touche qu'au champ typeBac :
+  // élèves, équipes, manches et notes de la classe sont conservés tels quels. Sauvegardé
+  // explicitement (comme l'import), car il peut être changé depuis la liste des classes.
+  function setTypeBacClasse(nom, typeBac) {
+    setClassesData((prev) => {
+      const actuelle = prev[nom];
+      if (!actuelle) return prev;
+      const donnees = { ...actuelle, typeBac };
+      saveState("classeSecours:" + slug(profActif) + ":" + slug(nom), donnees);
+      sauverClasse(profActif, nom, donnees).then(setSyncOk);
+      return { ...prev, [nom]: donnees };
+    });
+  }
+
   function ouvrirClasse(nom) {
     setClasseActive(nom);
     setOngletActif("eleves");
@@ -382,6 +397,7 @@ export default function App() {
         onImporte={importerDepuisAccueil}
         onOuvrir={ouvrirClasse}
         onSupprimer={supprimerClasse}
+        onTypeBac={setTypeBacClasse}
         onDeconnexion={handleDeconnexion}
         syncOk={syncOk}
       />
@@ -404,11 +420,23 @@ export default function App() {
               Relais <span className="text-piste-brique">200m</span> <span className="text-piste-ambre">· {classeActive}</span>
             </h1>
             <p className="text-xs text-piste-craie/50 mt-1">
-              By C. Guilhem <span className="text-piste-craie/25">· v2.9.0 · {profActif}{vue === "globale" ? " (vue globale)" : ""}</span>
+              <span className={classeInfo.typeBac ? "text-piste-ambre" : "text-piste-brique"}>{libelleTypeBac(classeInfo.typeBac)}</span> · By C. Guilhem <span className="text-piste-craie/25">· v2.10.0 · {profActif}{vue === "globale" ? " (vue globale)" : ""}</span>
             </p>
           </div>
         </div>
       </header>
+
+      {!classeInfo.typeBac && (
+        <div className="bg-piste-nuit border-b border-white/10 text-xs sm:text-sm px-4 py-2 flex flex-wrap items-center gap-2 justify-center text-center">
+          <span className="text-piste-craie/70">Type d'évaluation de cette classe ?</span>
+          <ChoixTypeBac valeur={null} onChange={(v) => setTypeBacClasse(classeActive, v)} />
+        </div>
+      )}
+      {classeInfo.typeBac === "gt" && (ongletActif === "resultats" || ongletActif === "bareme" || ongletActif === "recap") && (
+        <div className="bg-piste-ambre/15 text-piste-ambre text-xs px-4 py-2 text-center">
+          Classe de Bac GT : les notes affichées utilisent encore le barème Bac Pro. Le barème Bac GT sera intégré à l'étape suivante.
+        </div>
+      )}
 
       {!syncOk && (
         <div className="bg-piste-brique/90 text-white text-xs sm:text-sm px-4 py-2 flex items-center gap-2 justify-center text-center">
