@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { UserPlus, UserX, Pencil, Check, X } from "lucide-react";
+import { UserPlus, UserX, Pencil, Check, X, Download, Upload } from "lucide-react";
+import { exporterTout, restaurerTout } from "../firebase";
 
 function decomposeCivilite(v) {
   const m = /^(Mr|Mme)\s+(.*)$/.exec(v || "");
@@ -131,6 +132,65 @@ export default function AccesTab({ acces, onSauver }) {
           </div>
         )}
       </div>
+
+      <SauvegardeComplete />
+    </div>
+  );
+}
+
+// Sauvegarde complète du cloud (toutes les classes de tous les professeurs) dans un fichier,
+// et restauration de ce fichier. Réservé à l'administrateur.
+function SauvegardeComplete() {
+  const [etat, setEtat] = useState("");
+  const [occupe, setOccupe] = useState(false);
+
+  async function exporter() {
+    setOccupe(true); setEtat("Lecture de toutes les données du cloud…");
+    try {
+      const s = await exporterTout();
+      const blob = new Blob([JSON.stringify(s)], { type: "application/json" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `relais-200m-sauvegarde-complete-${s.exportLe.slice(0, 10)}.json`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+      setEtat(`✅ Sauvegarde téléchargée : ${s.compte.professeurs} professeur(s), ${s.compte.classes} classe(s)${s.compte.anciensBlocs ? `, ${s.compte.anciensBlocs} ancien(s) bloc(s)` : ""}, + les accès. Garde ce fichier précieusement (Drive, mail…).`);
+    } catch (e) {
+      setEtat("❌ Sauvegarde impossible (réseau ?). Réessaie avec une bonne connexion.");
+    }
+    setOccupe(false);
+  }
+
+  async function restaurer(fichier) {
+    setOccupe(true); setEtat("Lecture du fichier…");
+    try {
+      const s = JSON.parse(await fichier.text());
+      if (s.app !== "relais-200m") throw new Error("Ce fichier n'est pas une sauvegarde Relais 200m.");
+      const c = s.compte || {};
+      if (!confirm(`Restaurer cette sauvegarde du ${new Date(s.exportLe).toLocaleString("fr-FR")} ?\n${c.professeurs || 0} professeur(s), ${c.classes || 0} classe(s) + les accès.\nLes classes du fichier remplaceront celles qui portent le même nom ; les autres ne sont pas touchées.`)) { setOccupe(false); setEtat(""); return; }
+      setEtat("Restauration en cours…");
+      const n = await restaurerTout(s);
+      setEtat(`✅ Restauration terminée : ${n} document(s) écrit(s). Recharge l'appli pour voir les données.`);
+    } catch (e) {
+      setEtat("❌ " + (e.message || "Restauration impossible."));
+    }
+    setOccupe(false);
+  }
+
+  return (
+    <div className="bg-piste-panneau border border-white/10 rounded-xl p-4">
+      <p className="text-xs uppercase tracking-widest text-piste-craie/40 font-semibold mb-2">Sauvegarde complète</p>
+      <p className="text-xs text-piste-craie/40 mb-3">Un fichier avec toutes les données du cloud : les accès, et toutes les classes de tous les professeurs (élèves, équipes, résultats, rôles, réglages).</p>
+      <div className="flex flex-wrap gap-2">
+        <button disabled={occupe} onClick={exporter} className="flex items-center gap-1.5 bg-piste-brique hover:bg-piste-briqueclair disabled:opacity-50 text-white text-sm font-medium px-3.5 py-2 rounded-lg">
+          <Download size={14} /> Sauvegarder tout
+        </button>
+        <label className={`flex items-center gap-1.5 border border-white/10 text-piste-craie text-sm font-medium px-3.5 py-2 rounded-lg cursor-pointer ${occupe ? "opacity-50 pointer-events-none" : ""}`}>
+          <Upload size={14} /> Restaurer un fichier
+          <input type="file" accept="application/json,.json" className="hidden" onChange={(e) => { if (e.target.files?.[0]) restaurer(e.target.files[0]); e.target.value = ""; }} />
+        </label>
+      </div>
+      {etat && <p className="text-xs text-piste-craie/70 mt-3">{etat}</p>}
     </div>
   );
 }

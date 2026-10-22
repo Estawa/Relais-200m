@@ -433,7 +433,7 @@ export default function App() {
               Relais <span className="text-piste-brique">200m</span> <span className="text-piste-ambre">· {classeActive}</span>
             </h1>
             <p className="text-xs text-piste-craie/50 mt-1">
-              <span className={classeInfo.typeBac ? "text-piste-ambre" : "text-piste-brique"}>{libelleTypeBac(classeInfo.typeBac)}</span> · By C. Guilhem <span className="text-piste-craie/25">· v2.11.0 · {profActif}{vue === "globale" ? " (vue globale)" : ""}</span>
+              <span className={classeInfo.typeBac ? "text-piste-ambre" : "text-piste-brique"}>{libelleTypeBac(classeInfo.typeBac)}</span> · By C. Guilhem <span className="text-piste-craie/25">· v2.12.0 · {profActif}{vue === "globale" ? " (vue globale)" : ""}</span>
             </p>
           </div>
         </div>

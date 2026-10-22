@@ -9,6 +9,9 @@ import {
   getDoc,
   setDoc,
   deleteDoc,
+  collectionGroup,
+  getDocsFromServer,
+  writeBatch,
 } from "firebase/firestore";
 
 const firebaseConfig = {
@@ -118,4 +121,65 @@ export async function chargerAncienBlocProf(prof) {
   } catch (e) {
     return { data: { ...DEFAUT_ANCIEN }, ok: false };
   }
+}
+
+// ---------- Sauvegarde complète (administrateur) ----------
+// Un seul fichier avec TOUTES les données du cloud : accès (admin + collègues), toutes les
+// classes de tous les professeurs (y compris les collègues retirés), et l'ancien modèle v2.0.
+// Le fichier ne dépend pas des noms de collections : il pourra être restauré tel quel,
+// même si l'appli change de projet Firebase.
+const lireServeur = async (ref) => {
+  try { return await getDocsFromServer(ref); } catch (e) { return await getDocs(ref); }
+};
+
+export async function exporterTout() {
+  const accesSnap = await getDoc(doc(db, "meta", "acces"));
+  const profs = {};
+  let nbClasses = 0;
+  // Toutes les sous-collections « classes » rangées sous profs/{prof}/classes
+  let docs = [];
+  try {
+    docs = (await lireServeur(collectionGroup(db, "classes"))).docs
+      .filter((d) => d.ref.parent.parent && d.ref.parent.parent.parent.id === "profs");
+  } catch (e) {
+    // repli : professeurs connus de la liste d'accès
+    const a = accesSnap.exists() ? accesSnap.data() : {};
+    const noms = [a.nomAdmin || "Mr Guilhem", ...((a.collegues || []).map((c) => c.nom))];
+    for (const n of noms) {
+      docs.push(...(await lireServeur(collection(db, "profs", slug(n), "classes"))).docs);
+    }
+  }
+  docs.forEach((d) => {
+    const prof = d.ref.parent.parent.id;
+    if (!profs[prof]) profs[prof] = {};
+    profs[prof][d.id] = d.data();
+    nbClasses++;
+  });
+  const ancien = {};
+  (await lireServeur(collection(db, "profs_data"))).forEach((d) => { ancien[d.id] = d.data(); });
+  return {
+    app: "relais-200m",
+    format: 1,
+    exportLe: new Date().toISOString(),
+    acces: accesSnap.exists() ? accesSnap.data() : null,
+    profs,
+    profsData: ancien,
+    compte: { professeurs: Object.keys(profs).length, classes: nbClasses, anciensBlocs: Object.keys(ancien).length },
+  };
+}
+
+export async function restaurerTout(sauvegarde) {
+  if (!sauvegarde || sauvegarde.app !== "relais-200m") throw new Error("Ce fichier n'est pas une sauvegarde Relais 200m.");
+  const ecritures = [];
+  if (sauvegarde.acces) ecritures.push([doc(db, "meta", "acces"), sauvegarde.acces]);
+  Object.entries(sauvegarde.profs || {}).forEach(([prof, classes]) => {
+    Object.entries(classes).forEach(([id, data]) => ecritures.push([doc(db, "profs", prof, "classes", id), data]));
+  });
+  Object.entries(sauvegarde.profsData || {}).forEach(([id, data]) => ecritures.push([doc(db, "profs_data", id), data]));
+  for (let i = 0; i < ecritures.length; i += 400) {
+    const b = writeBatch(db);
+    ecritures.slice(i, i + 400).forEach(([ref, data]) => b.set(ref, data));
+    await b.commit();
+  }
+  return ecritures.length;
 }

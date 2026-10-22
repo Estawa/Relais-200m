@@ -1,6 +1,13 @@
 CHANGELOG — Relais 200m by C. Guilhem
 =====================================
 
+v2.12.0
+-----
+- Accès (administrateur) : nouvelle carte « Sauvegarde complète ». « Sauvegarder tout »
+  télécharge un fichier avec les accès et toutes les classes de tous les professeurs
+  (y compris des collègues retirés) ; « Restaurer un fichier » remet ces données dans le cloud.
+  Prépare le regroupement des applis Running dans un même projet Firebase.
+
 v2.11.0
 -----
 - Notes calculées selon le type de bac de la classe, avec les protocoles du lycée
