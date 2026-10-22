@@ -1,6 +1,13 @@
 CHANGELOG — Relais 200m by C. Guilhem
 =====================================
 
+v2.13.0
+-----
+- Déménagement vers le projet Firebase « Running » (vma-pro-seances), partagé avec VMA Pro et
+  Course de Durée Pro. Les données de Relais 200m y sont rangées à part (relais_meta,
+  relais_profs, relais_profs_data). Après la mise à jour : Accès > Restaurer un fichier avec la
+  sauvegarde complète faite avant le déménagement.
+
 v2.12.0
 -----
 - Accès (administrateur) : nouvelle carte « Sauvegarde complète ». « Sauvegarder tout »

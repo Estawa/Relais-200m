@@ -15,13 +15,19 @@ import {
 } from "firebase/firestore";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyDD8wvN7yVxmW3FhMTfJFnPdZ1QHcMcSYs",
-  authDomain: "relais-200m.firebaseapp.com",
-  projectId: "relais-200m",
-  storageBucket: "relais-200m.firebasestorage.app",
-  messagingSenderId: "531350246235",
-  appId: "1:531350246235:web:56b93c913f4d9c2dab807e",
+  apiKey: "AIzaSyDqRihpVWPqmw54T6X6zx3PS3F92Wol3Bg",
+  authDomain: "vma-pro-seances.firebaseapp.com",
+  projectId: "vma-pro-seances",
+  storageBucket: "vma-pro-seances.firebasestorage.app",
+  messagingSenderId: "378967245770",
+  appId: "1:378967245770:web:668b5f0f7251ec8a124533",
 };
+
+// Projet Firebase « Running » (vma-pro-seances), partagé avec VMA Pro et Course de Durée Pro.
+// Les collections de Relais 200m sont toutes préfixées relais_ pour ne rien mélanger.
+export const COL_META = "relais_meta";
+export const COL_PROFS = "relais_profs";
+export const COL_PROFS_DATA = "relais_profs_data";
 
 const app = initializeApp(firebaseConfig);
 // Cache local persistant (IndexedDB) : les écritures faites hors-ligne ou interrompues
@@ -47,7 +53,7 @@ export function slug(s) {
 // ---------- Accès enseignant (administrateur + collègues) ----------
 export async function loadAcces() {
   try {
-    const snap = await getDoc(doc(db, "meta", "acces"));
+    const snap = await getDoc(doc(db, COL_META, "acces"));
     if (snap.exists()) {
       const d = snap.data();
       return {
@@ -62,7 +68,7 @@ export async function loadAcces() {
 
 export async function saveAcces(config) {
   try {
-    await setDoc(doc(db, "meta", "acces"), config);
+    await setDoc(doc(db, COL_META, "acces"), config);
   } catch (e) {}
 }
 
@@ -76,7 +82,7 @@ const CLASSE_DEFAUT = { eleves: [], equipes: [], classementTokens: [], series: [
 
 export async function chargerToutesLesClasses(prof) {
   try {
-    const snap = await getDocs(collection(db, "profs", slug(prof), "classes"));
+    const snap = await getDocs(collection(db, COL_PROFS, slug(prof), "classes"));
     const classes = {};
     snap.forEach((d) => {
       const data = d.data();
@@ -90,7 +96,7 @@ export async function chargerToutesLesClasses(prof) {
 
 export async function sauverClasse(prof, nomClasse, donnees) {
   try {
-    await setDoc(doc(db, "profs", slug(prof), "classes", slug(nomClasse)), {
+    await setDoc(doc(db, COL_PROFS, slug(prof), "classes", slug(nomClasse)), {
       nom: nomClasse,
       ...donnees,
     });
@@ -102,7 +108,7 @@ export async function sauverClasse(prof, nomClasse, donnees) {
 
 export async function supprimerClasseCloud(prof, nomClasse) {
   try {
-    await deleteDoc(doc(db, "profs", slug(prof), "classes", slug(nomClasse)));
+    await deleteDoc(doc(db, COL_PROFS, slug(prof), "classes", slug(nomClasse)));
     return true;
   } catch (e) {
     return false;
@@ -116,7 +122,7 @@ const DEFAUT_ANCIEN = { eleves: [], equipes: [], classement: {}, series: [] };
 
 export async function chargerAncienBlocProf(prof) {
   try {
-    const snap = await getDoc(doc(db, "profs_data", slug(prof)));
+    const snap = await getDoc(doc(db, COL_PROFS_DATA, slug(prof)));
     return { data: snap.exists() ? { ...DEFAUT_ANCIEN, ...snap.data() } : { ...DEFAUT_ANCIEN }, ok: true };
   } catch (e) {
     return { data: { ...DEFAUT_ANCIEN }, ok: false };
@@ -133,20 +139,20 @@ const lireServeur = async (ref) => {
 };
 
 export async function exporterTout() {
-  const accesSnap = await getDoc(doc(db, "meta", "acces"));
+  const accesSnap = await getDoc(doc(db, COL_META, "acces"));
   const profs = {};
   let nbClasses = 0;
   // Toutes les sous-collections « classes » rangées sous profs/{prof}/classes
   let docs = [];
   try {
     docs = (await lireServeur(collectionGroup(db, "classes"))).docs
-      .filter((d) => d.ref.parent.parent && d.ref.parent.parent.parent.id === "profs");
+      .filter((d) => d.ref.parent.parent && d.ref.parent.parent.parent.id === COL_PROFS);
   } catch (e) {
     // repli : professeurs connus de la liste d'accès
     const a = accesSnap.exists() ? accesSnap.data() : {};
     const noms = [a.nomAdmin || "Mr Guilhem", ...((a.collegues || []).map((c) => c.nom))];
     for (const n of noms) {
-      docs.push(...(await lireServeur(collection(db, "profs", slug(n), "classes"))).docs);
+      docs.push(...(await lireServeur(collection(db, COL_PROFS, slug(n), "classes"))).docs);
     }
   }
   docs.forEach((d) => {
@@ -156,7 +162,7 @@ export async function exporterTout() {
     nbClasses++;
   });
   const ancien = {};
-  (await lireServeur(collection(db, "profs_data"))).forEach((d) => { ancien[d.id] = d.data(); });
+  (await lireServeur(collection(db, COL_PROFS_DATA))).forEach((d) => { ancien[d.id] = d.data(); });
   return {
     app: "relais-200m",
     format: 1,
@@ -171,11 +177,11 @@ export async function exporterTout() {
 export async function restaurerTout(sauvegarde) {
   if (!sauvegarde || sauvegarde.app !== "relais-200m") throw new Error("Ce fichier n'est pas une sauvegarde Relais 200m.");
   const ecritures = [];
-  if (sauvegarde.acces) ecritures.push([doc(db, "meta", "acces"), sauvegarde.acces]);
+  if (sauvegarde.acces) ecritures.push([doc(db, COL_META, "acces"), sauvegarde.acces]);
   Object.entries(sauvegarde.profs || {}).forEach(([prof, classes]) => {
-    Object.entries(classes).forEach(([id, data]) => ecritures.push([doc(db, "profs", prof, "classes", id), data]));
+    Object.entries(classes).forEach(([id, data]) => ecritures.push([doc(db, COL_PROFS, prof, "classes", id), data]));
   });
-  Object.entries(sauvegarde.profsData || {}).forEach(([id, data]) => ecritures.push([doc(db, "profs_data", id), data]));
+  Object.entries(sauvegarde.profsData || {}).forEach(([id, data]) => ecritures.push([doc(db, COL_PROFS_DATA, id), data]));
   for (let i = 0; i < ecritures.length; i += 400) {
     const b = writeBatch(db);
     ecritures.slice(i, i + 400).forEach(([ref, data]) => b.set(ref, data));
